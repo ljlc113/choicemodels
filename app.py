@@ -1,4 +1,4 @@
-# streamlit_app.py
+# app.py
 # Streamlit app to simulate models of choice under uncertainty
 # Models: Expected Value (EV), Expected Utility (EU), Prospect Theory (PT), Normalization models
 
@@ -12,22 +12,14 @@ st.title("Choice Under Uncertainty: EV · EU · Prospect Theory · Normalization
 # -----------------------------
 # Helper math functions
 # -----------------------------
-
 def crra_utility(x, r):
-    """CRRA utility: u(x) = x^(1-r)/(1-r) for r != 1; u(x) = ln(x) for r -> 1.
-    Defined for x > 0 only in standard form; here we clip at tiny positive for plotting.
-    """
     x = np.array(x)
     x_safe = np.maximum(x, 1e-9)
     if np.isclose(r, 1.0):
         return np.log(x_safe)
     return (np.power(x_safe, 1.0 - r) - 1.0) / (1.0 - r)
 
-
 def pt_value(x, alpha=0.88, beta=0.88, lamb=2.25):
-    """Prospect Theory value function (Tversky & Kahneman 1992 form).
-    v(x) = x^alpha for x >= 0; v(x) = -lambda * (-x)^beta for x < 0
-    """
     x = np.array(x)
     v = np.zeros_like(x)
     gains = x >= 0
@@ -35,36 +27,23 @@ def pt_value(x, alpha=0.88, beta=0.88, lamb=2.25):
     v[~gains] = -lamb * np.power(-x[~gains], beta)
     return v
 
-
 def prelec_weight(p, delta=1.0, gamma=0.7):
-    """Prelec two-parameter weighting: w(p) = exp(-(delta * (-ln p))^gamma), p in (0,1).
-    Clips p to avoid 0/1 boundaries for numerical stability.
-    """
     p = np.clip(np.array(p), 1e-9, 1 - 1e-9)
     return np.exp(-np.power(delta * (-np.log(p)), gamma))
-
 
 def identity_weight(p):
     return np.array(p)
 
-
 def divisive_normalization(u, k=1.0, context_mean=None):
-    """Simple divisive normalization.
-    V_norm(x) = u(x) / (k + C), where C is context term; here default C = mean(u) over plotting grid.
-    """
     if context_mean is None:
         context_mean = np.mean(u)
     return u / (k + context_mean)
 
-
 def range_normalization(u, eps=1e-6):
-    """Range normalization: V_norm = (u - min(u)) / (max(u) - min(u) + eps)"""
     umin, umax = np.min(u), np.max(u)
     return (u - umin) / (umax - umin + eps)
 
-
 def luce_choice_prob(v_a, v_b):
-    """Luce choice rule: P(A) = V_A / (V_A + V_B), assume nonnegative V."""
     v_a = np.maximum(v_a, 0.0)
     v_b = np.maximum(v_b, 0.0)
     denom = v_a + v_b + 1e-12
@@ -83,43 +62,45 @@ value_range = st.sidebar.slider("Outcome range (for value plots)", -100.0, 100.0
 num_points = st.sidebar.slider("Resolution (points)", 100, 1000, 400, step=50)
 
 x = np.linspace(value_range[0], value_range[1], num_points)
-
-# Probability grid for weighting plots
 p = np.linspace(1e-4, 1 - 1e-4, num_points)
 
 # -----------------------------
-# Model-specific parameters
+# Models
 # -----------------------------
 if model == "Expected Value (EV)":
     st.header("Expected Value (EV)")
     st.markdown(
         r"""
         **Value function**: $v(x) = x$  
-        **Probability function**: $w(p) = p$
+        **Probability function**: $w(p) = p$  
+        **Expected Value**: $EV = v(x) \times w(p) = x \times p$
         """
     )
 
-    v = x  # linear value
-    w = identity_weight(p)
-
-    # Plots
+    # Single gamble calculator
+    st.subheader("Single gamble calculator")
     c1, c2 = st.columns(2)
     with c1:
-        st.subheader("Value function: v(x)")
-        fig, ax = plt.subplots()
-        ax.plot(x, v)
-        ax.set_xlabel("Outcome x")
-        ax.set_ylabel("v(x)")
-        ax.set_title("EV Value Function")
-        st.pyplot(fig)
+        x0 = st.number_input("Outcome (x)", value=50.0)
     with c2:
-        st.subheader("Probability function: w(p)")
-        fig2, ax2 = plt.subplots()
-        ax2.plot(p, w)
-        ax2.set_xlabel("Probability p")
-        ax2.set_ylabel("w(p)")
-        ax2.set_title("Identity Weighting")
-        st.pyplot(fig2)
+        p0 = st.slider("Probability (p)", 0.0, 1.0, 0.5, step=0.01)
+    ev0 = x0 * p0
+    st.markdown(rf"**EV = {x0:.4g} × {p0:.4g} = {ev0:.4g}**")
+
+    # Functions & surfaces
+    v = x
+    w = identity_weight(p)
+    X, P = np.meshgrid(x, p)
+    EV_grid = X * P
+
+    st.subheader("Expected Value Surface: EV = x * p")
+    fig3, ax3 = plt.subplots()
+    cs = ax3.contourf(X, P, EV_grid, levels=30)
+    fig3.colorbar(cs, ax=ax3, label="EV")
+    ax3.set_xlabel("Outcome x")
+    ax3.set_ylabel("Probability p")
+    ax3.set_title("Expected Value Surface")
+    st.pyplot(fig3)
 
 elif model == "Expected Utility (EU)":
     st.header("Expected Utility (EU) – CRRA")
@@ -127,39 +108,30 @@ elif model == "Expected Utility (EU)":
 
     st.markdown(
         r"""
-        **Utility (value) function** (CRRA):  
+        **Utility function**:  
         $$
         u(x) = \begin{cases}
-        \dfrac{x^{1-r} - 1}{1 - r}, & r \neq 1,\\[6pt]
+        \dfrac{x^{1-r} - 1}{1 - r}, & r \neq 1,\\\\[6pt]
         \ln x, & r = 1
         \end{cases} \quad (x>0)
         $$
-        **Probability function**: $w(p) = p$
+        **Probability function**: $w(p) = p$  
+        **Expected Utility**: $EU = u(x) \times w(p)$
         """
     )
 
-    # For EU we only plot for positive x; mask negatives
-    x_pos = np.linspace(max(1e-6, value_range[0] if value_range[0] > 0 else 1e-6), max(value_range[1], 1e-6), num_points)
-    v = crra_utility(x_pos, r)
-    w = identity_weight(p)
-
+    # Single gamble calculator
+    st.subheader("Single gamble calculator")
     c1, c2 = st.columns(2)
     with c1:
-        st.subheader("Utility function: u(x)")
-        fig, ax = plt.subplots()
-        ax.plot(x_pos, v)
-        ax.set_xlabel("Outcome x (>0)")
-        ax.set_ylabel("u(x)")
-        ax.set_title("CRRA Utility")
-        st.pyplot(fig)
+        x0 = st.number_input("Outcome (x>0)", value=50.0, min_value=0.0)
     with c2:
-        st.subheader("Probability function: w(p)")
-        fig2, ax2 = plt.subplots()
-        ax2.plot(p, w)
-        ax2.set_xlabel("Probability p")
-        ax2.set_ylabel("w(p)")
-        ax2.set_title("Identity Weighting")
-        st.pyplot(fig2)
+        p0 = st.slider("Probability (p)", 0.0, 1.0, 0.5, step=0.01, key="eu_p0")
+    if x0 <= 0:
+        st.warning("EU with CRRA is defined for x>0. Using a tiny positive value for computation.")
+    u0 = crra_utility(np.array([max(x0, 1e-9)]), r)[0]
+    eu0 = u0 * p0
+    st.markdown(rf"**u(x) = {u0:.4g} · EU = {u0:.4g} × {p0:.4g} = {eu0:.4g}**")
 
 elif model == "Prospect Theory (PT)":
     st.header("Prospect Theory (Tversky & Kahneman 1992 + Prelec weighting)")
@@ -167,165 +139,4 @@ elif model == "Prospect Theory (PT)":
     beta = st.sidebar.slider("β (losses curvature)", 0.1, 1.0, 0.88, 0.01)
     lamb = st.sidebar.slider("λ (loss aversion)", 1.0, 5.0, 2.25, 0.05)
     delta = st.sidebar.slider("Prelec δ (scale)", 0.1, 2.0, 1.0, 0.05)
-    gamma = st.sidebar.slider("Prelec γ (curvature)", 0.1, 2.0, 0.7, 0.05)
-
-    st.markdown(
-        r"""
-        **Value function**:  
-        $$
-        v(x) = \begin{cases}
-        x^{\alpha}, & x \ge 0, \\
-        -\lambda\, (-x)^{\beta}, & x < 0
-        \end{cases}
-        $$
-        **Probability weighting (Prelec 2-parameter)**:  
-        $$
-        w(p) = \exp\!\left(-\big(\delta\,(-\ln p)\big)^{\gamma}\right), \quad p\in(0,1)
-        $$
-        """
-    )
-
-    v = pt_value(x, alpha, beta, lamb)
-    w = prelec_weight(p, delta, gamma)
-
-    c1, c2 = st.columns(2)
-    with c1:
-        st.subheader("Value function: v(x)")
-        fig, ax = plt.subplots()
-        ax.plot(x, v)
-        ax.axvline(0, linestyle="--", linewidth=1)
-        ax.set_xlabel("Outcome x")
-        ax.set_ylabel("v(x)")
-        ax.set_title("Prospect Theory Value")
-        st.pyplot(fig)
-    with c2:
-        st.subheader("Probability weighting: w(p)")
-        fig2, ax2 = plt.subplots()
-        ax2.plot(p, w)
-        ax2.plot(p, p, linestyle="--", linewidth=1)  # identity reference
-        ax2.set_xlabel("Probability p")
-        ax2.set_ylabel("w(p)")
-        ax2.set_title("Prelec Weighting vs Identity (dashed)")
-        st.pyplot(fig2)
-
-else:  # Normalization
-    st.header("Normalization Models")
-    norm_kind = st.sidebar.selectbox("Normalization type", ["Divisive", "Range"])
-    base_value_kind = st.sidebar.selectbox("Base value function", ["Linear v(x)=x", "CRRA u(x)"])
-    if base_value_kind == "CRRA u(x)":
-        r = st.sidebar.slider("Risk aversion r (CRRA)", 0.0, 2.0, 0.5, 0.01)
-
-    # Parameters
-    k = st.sidebar.slider("Divisive constant k", 0.0, 10.0, 1.0, 0.1)
-    eps = st.sidebar.slider("Range ε (stability)", 1e-6, 0.1, 1e-3)
-
-    # Two-option context for Luce probability
-    st.sidebar.markdown("---")
-    st.sidebar.write("**Two-option choice context** (for Luce probabilities)")
-    x_A = st.sidebar.slider("Option A outcome x_A", value_range[0], value_range[1], 20.0)
-    x_B = st.sidebar.slider("Option B outcome x_B", value_range[0], value_range[1], 0.0)
-
-    # Construct base utility/value
-    if base_value_kind == "Linear v(x)=x":
-        u = x.copy()
-        u_A, u_B = x_A, x_B
-        base_equation = r"$v(x)=x$"
-    else:
-        # restrict to positive domain for CRRA base; shift if needed for plotting
-        x_pos = np.linspace(max(1e-6, value_range[0] if value_range[0] > 0 else 1e-6), max(value_range[1], 1e-6), num_points)
-        u = crra_utility(x_pos, r)
-        base_equation = r"$u(x)=\\begin{cases}(x^{1-r}-1)/(1-r), & r\\ne 1 \\[4pt] \\ln x, & r=1\\end{cases}$"
-
-    # Apply normalization
-    if norm_kind == "Divisive":
-        if base_value_kind == "CRRA u(x)":
-            V = divisive_normalization(u, k=k, context_mean=np.mean(u))
-            # Map A,B using same rule
-            u_A = crra_utility(np.array([max(x_A, 1e-6)]), r)[0]
-            u_B = crra_utility(np.array([max(x_B, 1e-6)]), r)[0]
-            C = np.mean(u)
-        else:
-            V = divisive_normalization(u, k=k, context_mean=np.mean(u))
-            C = np.mean(u)
-        V_equation = rf"$V_{{norm}}(x)=\\dfrac{{u(x)}}{{k + C}}, \; C=\\mathrm{{mean}}[u(x)]$"
-        # Normalize A, B the same way (using same C)
-        V_A = u_A / (k + C)
-        V_B = u_B / (k + C)
-    else:  # Range
-        V = range_normalization(u, eps=eps)
-        if base_value_kind == "CRRA u(x)":
-            # recompute u_A, u_B in same domain
-            u_A = crra_utility(np.array([max(x_A, 1e-6)]), r)[0]
-            u_B = crra_utility(np.array([max(x_B, 1e-6)]), r)[0]
-        umin, umax = np.min(u), np.max(u)
-        V_A = (u_A - umin) / (umax - umin + eps)
-        V_B = (u_B - umin) / (umax - umin + eps)
-        V_equation = rf"$V_{{norm}}(x)=\\dfrac{{u(x)-u_{{min}}}}{{u_{{max}}-u_{{min}}+\\varepsilon}}$"
-
-    # Luce choice probability for two-option context
-    P_A = luce_choice_prob(V_A, V_B)
-
-    # Equations block
-    st.markdown(
-        r"""
-        **Base value function**: %s  
-        **Normalization**: %s  
-        **Luce choice probability (two options A,B)**:  
-        $$P(A) = \dfrac{V_A}{V_A + V_B}$$
-        """ % (base_equation, V_equation)
-    )
-
-    # Plots
-    c1, c2 = st.columns(2)
-
-    with c1:
-        st.subheader("Normalized value function: $V_{norm}(x)$")
-        fig, ax = plt.subplots()
-        # x-axis for CRRA case
-        x_plot = x if base_value_kind == "Linear v(x)=x" else x_pos
-        ax.plot(x_plot, V)
-        ax.set_xlabel("Outcome x")
-        ax.set_ylabel(r"$V_{norm}(x)$")
-        ax.set_title(f"{norm_kind} normalization of {base_value_kind.split()[0]}")
-        st.pyplot(fig)
-
-    with c2:
-        st.subheader("Luce probability for Option A vs B")
-        st.markdown(f"With current settings: **P(A) = {P_A:.3f}**")
-        fig2, ax2 = plt.subplots()
-        # Show how P(A) varies with x_A holding x_B fixed
-        if base_value_kind == "Linear v(x)=x":
-            xA_grid = np.linspace(value_range[0], value_range[1], 200)
-            uA_grid = xA_grid
-        else:
-            xA_grid = np.linspace(max(1e-6, value_range[0] if value_range[0] > 0 else 1e-6), max(value_range[1], 1e-6), 200)
-            uA_grid = crra_utility(xA_grid, r)
-
-        if norm_kind == "Divisive":
-            C = np.mean(u)
-            VA_grid = uA_grid / (k + C)
-            VB_const = V_B
-        else:
-            umin, umax = np.min(u), np.max(u)
-            VA_grid = (uA_grid - umin) / (umax - umin + eps)
-            VB_const = V_B
-
-        P_grid = luce_choice_prob(VA_grid, VB_const)
-        ax2.plot(xA_grid, P_grid)
-        ax2.set_xlabel("Option A outcome x_A")
-        ax2.set_ylabel("P(A)")
-        ax2.set_title("Luce P(A) vs x_A (x_B fixed)")
-        st.pyplot(fig2)
-
-# -----------------------------
-# Footer / usage notes
-# -----------------------------
-with st.expander("How to run this app"):
-    st.markdown(
-        """
-        1. Save this file as `streamlit_app.py`.
-        2. Install dependencies (ideally in a virtual env): `pip install streamlit matplotlib numpy`  
-        3. Run: `streamlit run streamlit_app.py`  
-        4. Use the sidebar to switch models and adjust parameters. The equations shown are the exact definitions used to generate the plots.
-        """
-    )
+    gamma = st.sidebar.slider("Prelec γ (curvature)", 0.1, 2.0, 0.7, 0.0
