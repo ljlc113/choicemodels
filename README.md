@@ -17,7 +17,7 @@ The app displays:
 Clone this repository and install dependencies:
 
 ```bash
-git clone https://github.com/USERNAME/choice-models-simulator.git
+git clone https://github.com/USERNAME/choicemodels.git
 cd choice-models-simulator
 pip install -r requirements.txt
 ```
@@ -27,7 +27,7 @@ pip install -r requirements.txt
 Run the Streamlit app:
 
 ```bash
-streamlit run streamlit_app.py
+streamlit run app.py
 ```
 
 Use the sidebar controls to select a model and adjust parameters. The plots and equations will update interactively.
