@@ -15,7 +15,8 @@ page = st.sidebar.radio(
         "Expected Value (EV)",
         "Expected Utility (EU)",
         "Prospect Theory (PT)",
-        "Normalization Techniques",
+        "Normalization Techniques"
+        "Normalization Comparisons",
     ),
 )
 
@@ -275,7 +276,10 @@ if page == "Normalization Techniques":
     st.latex(r"f(v) = \frac{1}{1+e^{-(v-\text{mean}(v)) \cdot k}}")
     st.caption("Intuition: Contrast enhancement — the brain emphasizes differences near the typical value, ignoring extremes.")
 
-if page == "Normalization Techniques":
+# ---------------------------------------
+# Normalization Comparisons
+# ---------------------------------------
+if page == "Normalization Comparisons":
     st.set_page_config(page_title="Normalization Methods Comparison", layout="wide")
 
     st.title("Normalization Models of Value – Comparison")
