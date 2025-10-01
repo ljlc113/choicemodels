@@ -108,13 +108,15 @@ if page == "Expected Value (EV)":
 
     colA, colB = st.columns(2)
     with colA:
-        st.markdown("**Lottery ticket:** 0.01% chance to win 100,000; otherwise 0")
+        st.markdown("**Lottery ticket:** 0.01% chance to win $100,000; otherwise$0")
         st.latex(r"\\mathrm{EV} = 0.0001 \times 100{,}000 + 0.9999 \times 0 = 10")
         st.metric("EV", f"{ev1:.2f}")
+        st.markdown("**What does this mean?** You should pursue this gamble, if the ticket costs less than 10 dollars.")
     with colB:
-        st.markdown("**50–50 gamble:** +55 with 50%, −50 with 50%")
+        st.markdown("**50–50 gamble:** +$55 with 50%, −$50 with 50%")
         st.latex(r"\\mathrm{EV} = 0.5 \times 55 + 0.5 \times (-50) = 2.5")
         st.metric("EV", f"{ev2:.2f}")
+        st.markdown("**What does this mean?** You should pursue this gamble, because expected value is positive.")
 
     st.divider()
     st.subheader("Graphics of EV utility and probability weighting functions:")
@@ -133,9 +135,318 @@ if page == "Expected Value (EV)":
 # ---------------------------------------
 # Expected Utility (EU)
 # ---------------------------------------
-# ---------------------------------------
-# Expected Utility (EU)
-# ---------------------------------------
+if page == "Expected Utility (EU)":
+    st.set_page_config(page_title="Normalization Methods Comparison", layout="wide")
+
+    st.title("Normalization Models of Value – Comparison")
+    st.caption("Draft app that mirrors the behavior of your Colab snippet and lets you tweak inputs interactively.")
+
+    # -----------------------------
+    # Helper: parse arrays from text
+    # -----------------------------
+    def parse_array(s: str) -> np.ndarray:
+        toks = [t for t in s.replace(",", " ").split() if t]
+        try:
+            return np.array([float(t) for t in toks], dtype=float)
+        except Exception:
+            return np.array([], dtype=float)
+
+    # -----------------------------
+    # On-page inputs
+    # -----------------------------
+    st.header("Inputs")
+
+    def_v1 = "1 2 5 10"
+    def_v2 = "1 5 9 10"
+
+    col_in1, col_in2 = st.columns(2)
+    with col_in1:
+        v1_str = st.text_input("v1 (comma/space separated)", value=def_v1)
+    with col_in2:
+        v2_str = st.text_input("v2 (comma/space separated)", value=def_v2)
+
+    col_in3, col_in4 = st.columns([1,1])
+    with col_in3:
+        slope = st.slider("Adaptive gain slope k", 0.05, 2.0, 0.7, 0.05)
+    with col_in4:
+        show_table = st.checkbox("Show numeric table", value=True)
+
+    v1 = parse_array(v1_str)
+    v2 = parse_array(v2_str)
+
+    # Guardrail
+    if v1.size == 0 or v2.size == 0:
+        st.error("Please provide valid numeric arrays for v1 and v2.")
+        st.stop()
+
+    # Inline summary right under inputs
+    col_sum = st.columns(4)
+    col_sum[0].metric("Mean v1", f"{np.mean(v1):.2f}")
+    col_sum[1].metric("Range v1", f"{(np.max(v1) - np.min(v1)):.2f}")
+    col_sum[2].metric("Mean v2", f"{np.mean(v2):.2f}")
+    col_sum[3].metric("Range v2", f"{(np.max(v2) - np.min(v2)):.2f}")
+
+    # -----------------------------
+    # Summary box: means and ranges for v1 and v2 (compact layout)
+    # -----------------------------
+    st.markdown("### Summary: Mean and Range")
+    col_sum = st.columns(4)
+    col_sum[0].metric("Mean v1", f"{np.mean(v1):.2f}")
+    col_sum[1].metric("Range v1", f"{(np.max(v1) - np.min(v1)):.2f}")
+    col_sum[2].metric("Mean v2", f"{np.mean(v2):.2f}")
+    col_sum[3].metric("Range v2", f"{(np.max(v2) - np.min(v2)):.2f}")
+
+    # -----------------------------
+    # Normalization functions
+    # -----------------------------
+    def range_normalization(v: np.ndarray) -> np.ndarray:
+        v = np.asarray(v, dtype=float)
+        if v.size == 0:
+            return v
+        denom = v.max() - v.min()
+        if denom == 0:
+            return np.ones_like(v)
+        return v / denom
+
+
+    def divisive_normalization(v: np.ndarray) -> np.ndarray:
+        v = np.asarray(v, dtype=float)
+        if v.size == 0:
+            return v
+        mu = v.mean()
+        if mu == 0:
+            return np.zeros_like(v)
+        return v / mu
+
+
+    def recurrent_normalization(v: np.ndarray) -> np.ndarray:
+        v = np.asarray(v, dtype=float)
+        if v.size == 0:
+            return v
+        mu = v.mean()
+        return v / (v + mu)
+
+
+    def adaptive_gain(v: np.ndarray, k: float = 0.7) -> np.ndarray:
+        v = np.asarray(v, dtype=float)
+        if v.size == 0:
+            return v
+        mu = v.mean()
+        return 1.0 / (1.0 + np.exp(-(v - mu) * k))
+
+    # -----------------------------
+    # Compute
+    # -----------------------------
+    v1_rn  = range_normalization(v1)
+    v1_dn  = divisive_normalization(v1)
+    v1_rdn = recurrent_normalization(v1)
+    v1_ag  = adaptive_gain(v1, slope)
+
+    v2_rn  = range_normalization(v2)
+    v2_dn  = divisive_normalization(v2)
+    v2_rdn = recurrent_normalization(v2)
+    v2_ag  = adaptive_gain(v2, slope)
+
+    # -----------------------------
+    # Equations
+    # -----------------------------
+    st.markdown("### Equations")
+    colE1, colE2 = st.columns(2)
+    with colE1:
+        st.latex(r"\text{Range: } f(v)=\frac{v}{\max(v)-\min(v)}")
+        st.latex(r"\text{Divisive: } f(v)=\frac{v}{\operatorname{mean}(v)}")
+    with colE2:
+        st.latex(r"\text{Recurrent divisive: } f(v)=\frac{v}{v+\operatorname{mean}(v)}")
+        st.latex(r"\text{Adaptive gain: } f(v)=\frac{1}{1+e^{-(v-\operatorname{mean}(v))\,k}}")
+
+    # -----------------------------
+    # Plots (two panels like your Colab)
+    # -----------------------------
+    fig, ax = plt.subplots(1, 2, figsize=(12, 5), sharey=True)
+
+    # Colors matching your Colab example
+    c_rn = "#F8766D"
+    c_dn = "#7CAE00"
+    c_rdn = "#00BFC4"
+    c_ag = "#C77CFF"
+
+    ax[0].plot(v1, v1_rn,  color=c_rn,  marker='o')
+    ax[0].plot(v1, v1_dn,  color=c_dn,  marker='o')
+    ax[0].plot(v1, v1_rdn, color=c_rdn, marker='o')
+    ax[0].plot(v1, v1_ag,  color=c_ag,  marker='o')
+    ax[0].legend(['range normalization','divisive normalization','recurrent divisive norm','adaptive gain/logistic'])
+    ax[0].set_xlabel('Value')
+    ax[0].set_ylabel('Normalization model output')
+    ax[0].set_title('Normalization models (v1)')
+
+    ax[1].plot(v2, v2_rn,  color=c_rn,  marker='o')
+    ax[1].plot(v2, v2_dn,  color=c_dn,  marker='o')
+    ax[1].plot(v2, v2_rdn, color=c_rdn, marker='o')
+    ax[1].plot(v2, v2_ag,  color=c_ag,  marker='o')
+    ax[1].tick_params(labelleft=True)
+    ax[1].legend(['range normalization','divisive normalization','recurrent divisive norm','adaptive gain/logistic'])
+    ax[1].set_xlabel('Value')
+    ax[1].set_ylabel('Normalization model output')
+    ax[1].set_title('Normalization models (v2)')
+
+    st.pyplot(fig, clear_figure=True)
+
+    # -----------------------------
+    # Optional: table
+    # -----------------------------
+    if show_table:
+        st.markdown("### Numeric comparison table")
+        import pandas as pd
+        df1 = pd.DataFrame({
+            'v1': v1,
+            'range': v1_rn,
+            'divisive': v1_dn,
+            'recurrent': v1_rdn,
+            'adaptive_gain': v1_ag,
+        })
+        df2 = pd.DataFrame({
+            'v2': v2,
+            'range': v2_rn,
+            'divisive': v2_dn,
+            'recurrent': v2_rdn,
+            'adaptive_gain': v2_ag,
+        })
+        st.dataframe(df1, use_container_width=True)
+        st.dataframe(df2, use_container_width=True)
+
+    st.info("Tip: paste different arrays (e.g., low-biased vs high-biased) to see how context shifts each normalization.")
+
+    # ---------------------------------------
+    # Expected Utility (Draft Section)
+    # ---------------------------------------
+    st.markdown("---")
+    st.header("Expected Utility (Draft)")
+
+    st.markdown(
+        "This section implements Expected Utility with a sign–power utility function: "
+        "`return (1 if v >= 0 else -1) * (abs(v) ** alpha)` and identity probability weighting `w(p)=p`."
+    )
+
+    # --- Parameters & inputs ---
+    colP1, colP2, colP3 = st.columns(3)
+    with colP1:
+        alpha = st.slider("Utility curvature α", 0.2, 2.0, 0.88, 0.02)
+    with colP2:
+        v_lottery = st.number_input("Lottery payoff (v_lottery)", value=100000.0, step=1000.0)
+        p_lottery = st.number_input("Lottery probability (p_lottery)", value=0.0001, min_value=0.0, max_value=1.0, step=0.0001, format="%.4f")
+    with colP3:
+        v_gamble1 = st.number_input("Gamble outcome 1 (gain)", value=55.0, step=1.0)
+        v_gamble2 = st.number_input("Gamble outcome 2 (loss)", value=-50.0, step=1.0)
+        p_gamble = st.number_input("Gamble probability for outcome 1", value=0.5, min_value=0.0, max_value=1.0, step=0.05)
+
+    # --- Core functions ---
+    def utility_function(v, alpha=0.88):
+        return (1 if v >= 0 else -1) * (abs(v) ** alpha)
+
+    def EU(p, u1, u2=0):
+        return p * u1 + (1 - p) * u2
+
+    # --- Show equations used ---
+    colEq1, colEq2 = st.columns(2)
+    with colEq1:
+        st.latex(r"u(v) = (1 \; \text{if } v \ge 0 \; \text{else } -1)\cdot |v|^{\alpha}")
+    with colEq2:
+        st.latex(r"EU = p\,u(v_1) + (1-p)\,u(v_2)")
+
+    # --- Plot utility function on [0, 50] ---
+    v_min, v_max, v_step = 0, 50, 10
+    v = np.arange(v_min, v_max + v_step, v_step)
+    u = np.array([utility_function(val, alpha) for val in v], dtype=float)
+
+    fig_u, ax_u = plt.subplots()
+    ax_u.plot(v, u, marker='o')
+    ax_u.plot([v_min, v_max], [v_min, v_max], color='gray', ls=':', label='u(v)=v (linear ref)')
+    ax_u.set_xlabel('Value v')
+    ax_u.set_ylabel('Utility u(v)')
+    ax_u.set_title('Utility function (0–50)')
+    ax_u.legend()
+    st.pyplot(fig_u, clear_figure=True)
+
+    # --- Subjective spacing & sensitivity ---
+    # Compare u(10)-u(0) vs u(50)-u(40)
+    uv0, uv10, uv40, uv50 = [utility_function(x, alpha) for x in (0, 10, 40, 50)]
+    span_0_10 = uv10 - uv0
+    span_40_50 = uv50 - uv40
+
+    # Marginal sensitivity over a finer grid (v>0)
+    vv = np.linspace(0.001, 50, 500)
+    # derivative du/dv for gains: alpha * v^(alpha-1)
+    dudv = alpha * (vv ** (alpha - 1))
+    max_idx = int(np.argmax(dudv))
+    most_sensitive_at = vv[max_idx]
+
+    colS1, colS2, colS3 = st.columns(3)
+    colS1.metric("Δu (0→10)", f"{span_0_10:.3g}")
+    colS2.metric("Δu (40→50)", f"{span_40_50:.3g}")
+    colS3.metric("Max sensitivity at v≈", f"{most_sensitive_at:.2f}")
+
+    if np.isclose(span_0_10, span_40_50, rtol=1e-6, atol=1e-9):
+        st.info("Subjective differences are ~the same between 0–10 and 40–50.")
+    else:
+        bigger = "0–10" if span_0_10 > span_40_50 else "40–50"
+        st.info(f"Subjective difference is larger for {bigger} (with α={alpha:.2f}).")
+
+    # Optional: show marginal utility curve
+    fig_mu, ax_mu = plt.subplots()
+    ax_mu.plot(vv, dudv)
+    ax_mu.set_xlabel('Value v (gains)')
+    ax_mu.set_ylabel('Marginal utility du/dv')
+    ax_mu.set_title('Where sensitivity is highest (du/dv)')
+    st.pyplot(fig_mu, clear_figure=True)
+
+    # --- EU calculations for the two scenarios ---
+    # Lottery: p_lottery chance of v_lottery, else 0
+    u_lottery = utility_function(v_lottery, alpha)
+    eu_lottery = EU(p_lottery, u1=u_lottery, u2=utility_function(0, alpha))
+
+    # Gamble: p_gamble chance of v_gamble1, (1-p) of v_gamble2
+    u_g1 = utility_function(v_gamble1, alpha)
+    u_g2 = utility_function(v_gamble2, alpha)
+    eu_gamble = EU(p_gamble, u1=u_g1, u2=u_g2)
+
+    colEU1, colEU2 = st.columns(2)
+    with colEU1:
+        st.subheader("Lottery")
+        st.write(f"p = {p_lottery:.4f}, payoff = {v_lottery:.0f}")
+        st.latex(r"EU_{lottery} = p\,u(v) + (1-p)\,u(0)")
+        st.metric("EU (lottery)", f"{eu_lottery:.3g}")
+    with colEU2:
+        st.subheader("50–50 Gamble")
+        st.write(f"p = {p_gamble:.2f}, outcomes = {v_gamble1:.0f} and {v_gamble2:.0f}")
+        st.latex(r"EU_{gamble} = p\,u(v_1) + (1-p)\,u(v_2)")
+        st.metric("EU (gamble)", f"{eu_gamble:.3g}")
+
+    # --- Should you pursue each according to EU? ---
+    # Compare each EU against status-quo u(0)=0
+    u_status_quo = utility_function(0, alpha)
+
+    def decision_text(eu_val: float) -> str:
+        if eu_val > u_status:
+            return "Pursue (EU > status quo)"
+        elif eu_val < u_status:
+            return "Do NOT pursue (EU < status quo)"
+        return "Indifferent (EU ≈ status quo)"
+
+    u_status = u_status_quo
+    colD1, colD2 = st.columns(2)
+    colD1.success(decision_text(eu_lottery))
+    colD2.success(decision_text(eu_gamble))
+
+    # --- What changed and why? ---
+    st.markdown("### What changed and why?")
+    st.markdown(
+        "- When **α < 1** (concave for gains), marginal utility is higher near 0 and falls with v. "
+        "This makes large payoffs (like the lottery) contribute less utility than their face value, "
+        "so EU can be modest despite a large prize."
+        "- The 50–50 gamble combines a moderate gain and a loss. The sign–power utility makes losses count with the same curvature; "
+        "their disutility can outweigh the gain depending on α, shifting the EU and the decision.")
+
+
 if page == "Expected Utility (EU)":
     st.title("Expected Utility (EU)")
     st.markdown(
