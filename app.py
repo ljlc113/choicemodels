@@ -447,6 +447,40 @@ if page == "Normalization Comparisons":
         })
         st.dataframe(df1, use_container_width=True)
         st.dataframe(df2, use_container_width=True)
+    
+    import pandas as pd
+
+# -----------------------------
+# Normalization comparison table (with your equations)
+# -----------------------------
+    st.subheader("Comparison of Normalization Models")
+
+    data = {
+        "Normalization Model": [
+            "Range Normalization",
+            "Divisive Normalization",
+            "Recurrent Divisive Normalization",
+            "Adaptive Gain / Logistic Model"
+        ],
+        "Equation (as implemented)": [
+            r"$V_{norm}(v) = \dfrac{v}{\max(v) - \min(v)}$",
+            r"$V_{norm}(v) = \dfrac{v}{\text{mean}(v)}$",
+            r"$V_{norm}(v) = \dfrac{v}{v + \text{mean}(v)}$",
+            r"$V(v) = \dfrac{1}{1 + \exp\big(-(v - \text{mean}(v)) \cdot \text{slope}\big)}$"
+        ],
+        "When to Use": [
+            "Scales values by the observed range. Useful when absolute min/max bounds of options matter.",
+            "Normalizes relative to the average. Good when choices are judged against the context mean.",
+            "Adds recurrent suppression (self + mean). Captures competitive dynamics between options.",
+            "Produces sigmoidal sensitivity around the context mean, with adjustable slope. Useful for adaptive gain and psychophysical modeling."
+        ]
+    }
+
+    df_norm = pd.DataFrame(data)
+
+    # Display the table in Streamlit
+    st.table(df_norm)
+
 
      # -----------------------------
     # Equations
@@ -459,3 +493,4 @@ if page == "Normalization Comparisons":
     with colE2:
         st.latex(r"\text{Recurrent divisive: } f(v)=\frac{v}{v+\operatorname{mean}(v)}")
         st.latex(r"\text{Adaptive gain: } f(v)=\frac{1}{1+e^{-(v-\operatorname{mean}(v))\,k}}")
+    
