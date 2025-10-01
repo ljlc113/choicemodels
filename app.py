@@ -289,10 +289,9 @@ if page == "Normalization Techniques":
 # Normalization Comparisons
 # ---------------------------------------
 if page == "Normalization Comparisons":
-    st.set_page_config(page_title="Normalization Methods Comparison", layout="wide")
+    st.set_page_config(page_title="Normalization Methods Comparisons", layout="wide")
 
-    st.title("Normalization Comparison – Restaurant prices ")
-    st.caption("Interactive version of the Google Colab that compares the different normalization methods! Situation: imagine you're choosing  between restaurants with different prices. You can compare what happens when the restaurant group has a larger range, when the average prices tend to be lower vs. higher, and how that plays out with each normalization method.")
+    st.title("Normalization Comparisons")
 
     # -----------------------------
     # Helper: parse arrays from text
@@ -337,7 +336,8 @@ if page == "Normalization Comparisons":
     # -----------------------------
     # On-page inputs
     # -----------------------------
-    st.header("Inputs")
+    st.header("Example: Restaurant prices")
+    st.caption("Interactive version of the Google Colab that compares the different normalization methods! Situation: imagine you're choosing  between restaurants with different prices. You can compare what happens when the restaurant group has a larger range, when the average prices tend to be lower vs. higher, and how that plays out with each normalization method.")
 
     def_v1 = "1 2 5 10"
     def_v2 = "1 5 9 10"
