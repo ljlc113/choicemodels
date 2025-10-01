@@ -1,288 +1,296 @@
-# app.py
-# Streamlit app to simulate models of choice under uncertainty
-# Models: Expected Value (EV), Expected Utility (EU), Prospect Theory (PT), Normalization models
-
-import numpy as np
 import streamlit as st
+import numpy as np
 import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="Choice Under Uncertainty Models", layout="wide")
-st.title("Choice Under Uncertainty: EV · EU · Prospect Theory · Normalization")
+st.set_page_config(page_title="Choice Models & Normalization", layout="wide")
 
-# -----------------------------
-# Helper math functions
-# -----------------------------
-def crra_utility(x, r):
-    x = np.array(x)
-    x_safe = np.maximum(x, 1e-9)
-    if np.isclose(r, 1.0):
-        return np.log(x_safe)
-    return (np.power(x_safe, 1.0 - r) - 1.0) / (1.0 - r)
-
-def pt_value(x, alpha=0.88, beta=0.88, lamb=2.25):
-    x = np.array(x)
-    v = np.zeros_like(x)
-    gains = x >= 0
-    v[gains] = np.power(x[gains], alpha)
-    v[~gains] = -lamb * np.power(-x[~gains], beta)
-    return v
-
-def prelec_weight(p, delta=1.0, gamma=0.7):
-    p = np.clip(np.array(p), 1e-9, 1 - 1e-9)
-    return np.exp(-np.power(delta * (-np.log(p)), gamma))
-
-def identity_weight(p):
-    return np.array(p)
-
-def divisive_normalization(u, k=1.0, context_mean=None):
-    if context_mean is None:
-        context_mean = np.mean(u)
-    return u / (k + context_mean), context_mean
-
-def range_normalization(u, eps=1e-6):
-    umin, umax = np.min(u), np.max(u)
-    return (u - umin) / (umax - umin + eps), (umin, umax)
-
-def luce_choice_prob(v_a, v_b):
-    v_a = np.maximum(v_a, 0.0)
-    v_b = np.maximum(v_b, 0.0)
-    denom = v_a + v_b + 1e-12
-    return v_a / denom
-
-# -----------------------------
-# Sidebar controls
-# -----------------------------
-model = st.sidebar.selectbox(
-    "Select model",
-    ["Expected Value (EV)", "Expected Utility (EU)", "Prospect Theory (PT)", "Normalization"],
+# ---------------------------------------
+# Sidebar Navigation
+# ---------------------------------------
+st.sidebar.title("Navigation")
+page = st.sidebar.radio(
+    "Go to",
+    (
+        "Overview",
+        "Expected Value (EV)",
+        "Expected Utility (EU)",
+        "Prospect Theory (PT)",
+        "Normalization Techniques",
+    ),
 )
 
-st.sidebar.markdown("---")
-value_range = st.sidebar.slider("Outcome range (for value plots)", -100.0, 100.0, (-50.0, 100.0))
-num_points = st.sidebar.slider("Resolution (points)", 100, 1000, 400, step=50)
+# ---------------------------------------
+# Helper utilities
+# ---------------------------------------
+def _two_cols():
+    return st.columns(2)
 
-x = np.linspace(value_range[0], value_range[1], num_points)
-p = np.linspace(1e-4, 1 - 1e-4, num_points)
 
-# -----------------------------
-# Models
-# -----------------------------
-if model == "Expected Value (EV)":
-    st.header("Expected Value (EV)")
-    st.markdown(
-        r"""
-        **Value function**: $v(x) = x$  
-        **Probability function**: $w(p) = p$  
-        **Expected Value**: $EV = v(x) \times w(p) = x \times p$
-        """
-    )
+def _show_eq(title: str, latex: str):
+    st.markdown(f"### {title}")
+    st.latex(latex)
 
-    # Single gamble calculator
-    st.subheader("Single gamble calculator")
-    c1, c2 = st.columns(2)
-    with c1:
-        x0 = st.number_input("Outcome (x)", value=50.0)
-    with c2:
-        p0 = st.slider("Probability (p)", 0.0, 1.0, 0.5, step=0.01)
-    ev0 = x0 * p0
-    st.markdown(rf"**EV = {x0:.4g} × {p0:.4g} = {ev0:.4g}**")
 
-    # Surface (EV)
-    v = x
-    w = identity_weight(p)
-    X, P = np.meshgrid(x, p)
-    EV_grid = X * P
+def _plot_simple(x, y, xlabel, ylabel, title):
+    fig, ax = plt.subplots()
+    ax.plot(x, y)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+    st.pyplot(fig, clear_figure=True)
 
-    st.subheader("Expected Value Surface: EV = x * p")
-    fig3, ax3 = plt.subplots()
-    cs = ax3.contourf(X, P, EV_grid, levels=30)
-    fig3.colorbar(cs, ax=ax3, label="EV")
-    ax3.set_xlabel("Outcome x")
-    ax3.set_ylabel("Probability p")
-    ax3.set_title("Expected Value Surface")
-    st.pyplot(fig3)
 
-elif model == "Expected Utility (EU)":
-    st.header("Expected Utility (EU) – CRRA")
-    r = st.sidebar.slider("Risk aversion r (CRRA)", 0.0, 2.0, 0.5, 0.01)
+def _plot_multi(x, ys, labels, xlabel, ylabel, title):
+    fig, ax = plt.subplots()
+    for y, lab in zip(ys, labels):
+        ax.plot(x, y, label=lab)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+    ax.legend()
+    st.pyplot(fig, clear_figure=True)
 
-    st.markdown(
-        r"""
-        **Utility function**:  
-        $$
-        u(x) = \begin{cases}
-        \dfrac{x^{1-r} - 1}{1 - r}, & r \neq 1,\\\\[6pt]
-        \ln x, & r = 1
-        \end{cases} \quad (x>0)
-        $$
-        **Probability function**: $w(p) = p$  
-        **Expected Utility**: $EU = u(x) \times w(p)$
-        """
-    )
 
-    # Single gamble calculator
-    st.subheader("Single gamble calculator")
-    c1, c2 = st.columns(2)
-    with c1:
-        x0 = st.number_input("Outcome (x>0)", value=50.0, min_value=0.0)
-    with c2:
-        p0 = st.slider("Probability (p)", 0.0, 1.0, 0.5, step=0.01, key="eu_p0")
-    if x0 <= 0:
-        st.warning("EU with CRRA is defined for x>0. Using a tiny positive value for computation.")
-    u0 = crra_utility(np.array([max(x0, 1e-9)]), r)[0]
-    eu0 = u0 * p0
-    st.markdown(rf"**u(x) = {u0:.4g} · EU = {u0:.4g} × {p0:.4g} = {eu0:.4g}**")
+def desirability_from_price(prices):
+    # Convert prices (lower=better) to a nonnegative desirability signal s_i
+    # s_i = max(p) - p_i, then rescaled to [0, 1] if needed downstream
+    prices = np.array(prices, dtype=float)
+    s = prices.max() - prices
+    return s
 
-elif model == "Prospect Theory (PT)":
-    st.header("Prospect Theory (Tversky & Kahneman 1992 + Prelec weighting)")
-    alpha = st.sidebar.slider("α (gains curvature)", 0.1, 1.0, 0.88, 0.01)
-    beta = st.sidebar.slider("β (losses curvature)", 0.1, 1.0, 0.88, 0.01)
-    lamb = st.sidebar.slider("λ (loss aversion)", 1.0, 5.0, 2.25, 0.05)
-    delta = st.sidebar.slider("Prelec δ (scale)", 0.1, 2.0, 1.0, 0.05)
-    gamma = st.sidebar.slider("Prelec γ (curvature)", 0.1, 2.0, 0.7, 0.05)
 
-    st.markdown(
-        r"""
-        **Value function**:  
-        $$
-        v(x) = \begin{cases}
-        x^{\alpha}, & x \ge 0, \\\\
-        -\lambda\, (-x)^{\beta}, & x < 0
-        \end{cases}
-        $$
-        **Probability weighting (Prelec)**:  
-        $$
-        w(p) = \exp\!\left(-\big(\delta\,(-\ln p)\big)^{\gamma}\right)
-        $$
-        **Prospect Value**: $PV = v(x) \times w(p)$
-        """
-    )
-
-    # Single gamble calculator
-    st.subheader("Single gamble calculator")
-    c1, c2 = st.columns(2)
-    with c1:
-        x0 = st.number_input("Outcome (x)", value=50.0, key="pt_x0")
-    with c2:
-        p0 = st.slider("Probability (p)", 0.0, 1.0, 0.5, step=0.01, key="pt_p0")
-    v0 = pt_value(np.array([x0]), alpha, beta, lamb)[0]
-    w0 = prelec_weight(np.array([p0]), delta, gamma)[0]
-    pv0 = v0 * w0
-    st.markdown(rf"**v(x) = {v0:.4g}, w(p) = {w0:.4g}, PV = {pv0:.4g}**")
-
-elif model == "Normalization":
-    st.header("Normalization Models")
-    st.markdown(
-        r"""
-        We compute **normalized values** for two options \(A\) and \(B\) and the **Luce choice probability**:
-        $$
-        P(A) = \frac{V_A}{V_A + V_B}.
-        $$
-        Choose a normalization rule and base value function below.
-        """
-    )
-
-    # Sidebar params for normalization
-    norm_kind = st.sidebar.selectbox("Normalization type", ["Divisive", "Range"])
-    base_value_kind = st.sidebar.selectbox("Base value function", ["Linear v(x)=x", "CRRA u(x)"])
-    if base_value_kind == "CRRA u(x)":
-        r = st.sidebar.slider("Risk aversion r (CRRA)", 0.0, 2.0, 0.5, 0.01)
-    k = st.sidebar.slider("Divisive constant k", 0.0, 10.0, 1.0, 0.1)
-    eps = st.sidebar.slider("Range ε (stability)", 1e-6, 0.1, 1e-3)
-
-    # Calculator for A vs B
-    st.subheader("Two-option calculator (A vs B)")
-    c1, c2 = st.columns(2)
-    with c1:
-        x_A = st.number_input("Option A outcome (x_A)", value=20.0)
-    with c2:
-        x_B = st.number_input("Option B outcome (x_B)", value=0.0)
-
-    # Base utility for the two outcomes
-    if base_value_kind == "Linear v(x)=x":
-        uA, uB = float(x_A), float(x_B)
-        base_eq = r"$v(x)=x$"
-    else:
-        uA = crra_utility(np.array([max(x_A, 1e-9)]), r)[0]
-        uB = crra_utility(np.array([max(x_B, 1e-9)]), r)[0]
-        base_eq = r"$u(x)=\begin{cases}(x^{1-r}-1)/(1-r), & r\ne 1 \\ \ln x, & r=1\end{cases}$"
-
-    # Normalize using the *pair* as the context
-    if norm_kind == "Divisive":
-        context_mean = np.mean([uA, uB])
-        VA = uA / (k + context_mean)
-        VB = uB / (k + context_mean)
-        norm_eq = r"$V_{\text{norm}}(x)=\dfrac{u(x)}{k + \mathrm{mean}[u_A,u_B]}$"
-    else:  # Range
-        umin, umax = min(uA, uB), max(uA, uB)
-        VA = (uA - umin) / (umax - umin + eps)
-        VB = (uB - umin) / (umax - umin + eps)
-        norm_eq = r"$V_{\text{norm}}(x)=\dfrac{u(x)-u_{\min}}{u_{\max}-u_{\min}+\varepsilon}$,\; u_{\min/\max}\ \text{from } \{u_A,u_B\}$"
-
-    PA = luce_choice_prob(VA, VB)
-    PB = 1.0 - PA
-
-    st.markdown(
-        rf"""
-        **Base value:** {base_eq}  
-        **Normalization:** {norm_eq}  
-        **Luce probability:** $P(A)=\dfrac{{V_A}}{{V_A+V_B}}$
-        """
-    )
-    st.markdown(
-        rf"""
-        **Computed values:**  
-        - $u_A = {uA:.4g}$, $u_B = {uB:.4g}$  
-        - $V_A = {VA:.4g}$, $V_B = {VB:.4g}$  
-        - **P(A) = {PA:.3f}**, P(B) = {PB:.3f}
-        """
-    )
-
-    # ---- New: Plot P(A) vs x_A (holding x_B fixed) ----
-    st.subheader("P(A) as a function of x_A (x_B fixed)")
-    # Grid for x_A based on the global value_range
-    xA_grid = np.linspace(value_range[0], value_range[1], 300)
-
-    if base_value_kind == "Linear v(x)=x":
-        uA_grid = xA_grid
-        # VB_const already computed above for current x_B:
-        VB_const = VB
-        if norm_kind == "Divisive":
-            C = np.mean([uA, uB])  # keep context consistent with calculator
-            VA_grid = uA_grid / (k + C)
-        else:  # Range
-            umin, umax = min(uA, uB), max(uA, uB)
-            VA_grid = (uA_grid - umin) / (umax - umin + eps)
-    else:
-        # ensure positive for CRRA
-        xA_grid_pos = np.maximum(xA_grid, 1e-9)
-        uA_grid = crra_utility(xA_grid_pos, r)
-        VB_const = VB
-        if norm_kind == "Divisive":
-            C = np.mean([uA, uB])
-            VA_grid = uA_grid / (k + C)
-        else:
-            umin, umax = min(uA, uB), max(uA, uB)
-            VA_grid = (uA_grid - umin) / (umax - umin + eps)
-
-    P_grid = luce_choice_prob(VA_grid, VB_const)
-
-    figP, axP = plt.subplots()
-    axP.plot(xA_grid, P_grid)
-    axP.set_xlabel("Option A outcome x_A")
-    axP.set_ylabel("P(A)")
-    axP.set_title("Luce P(A) vs x_A (x_B fixed)")
-    st.pyplot(figP)
-
-# -----------------------------
-# Footer
-# -----------------------------
-with st.expander("How to run this app"):
+# ---------------------------------------
+# Overview
+# ---------------------------------------
+if page == "Overview":
+    st.title("Choice Models under Uncertainty & Normalization Techniques")
     st.markdown(
         """
-        1. Save this file as `app.py`.
-        2. Install dependencies: `pip install streamlit matplotlib numpy`
-        3. Run: `streamlit run app.py`
-        4. Use the sidebar to switch models and adjust parameters.
+        This interactive app covers three classic decision models under risk/uncertainty and four 
+        normalization schemes used in value coding.
+
+        **Models**
+        - **Expected Value (EV):** linear utility, linear probability.
+        - **Expected Utility (EU):** nonlinear utility over outcomes.
+        - **Prospect Theory (PT):** reference-dependent value and nonlinear probability weighting.
+
+        **Normalization techniques** (applied to an example of choosing between restaurants by price — *lower is better*):
+        - **Range normalization**
+        - **Divisive normalization**
+        - **Recurrent divisive normalization**
+        - **Adaptive gain / logistic value**
         """
     )
+    st.info("Use the sidebar to visit the model- or normalization-specific pages. Sliders let you change parameters and immediately see the equations and curves update.")
+
+# ---------------------------------------
+# Expected Value (EV)
+# ---------------------------------------
+if page == "Expected Value (EV)":
+    st.title("Expected Value (EV)")
+    st.markdown(
+        "EV assumes **linear utility** and **linear probability weighting**. It simply multiplies outcomes by their probabilities and sums.")
+
+    _show_eq("EV of a lottery L = {(x_i, p_i)}", r"\\mathrm{EV}(L) = \\sum_i p_i \\cdot x_i")
+    _show_eq("Utility (linear)", r"u(x) = x")
+    _show_eq("Probability weighting (identity)", r"w(p) = p")
+
+    # Visuals
+    col1, col2 = _two_cols()
+    with col1:
+        xr = np.linspace(-100, 100, 400)
+        _plot_simple(xr, xr, "Outcome x", "Utility u(x)", "Linear utility: u(x)=x")
+
+    with col2:
+        pr = np.linspace(0, 1, 200)
+        _plot_simple(pr, pr, "Probability p", "Weight w(p)", "Identity weighting: w(p)=p")
+
+# ---------------------------------------
+# Expected Utility (EU)
+# ---------------------------------------
+if page == "Expected Utility (EU)":
+    st.title("Expected Utility (EU)")
+    st.markdown("EU allows **nonlinear utility**. Below we use a **power/CRRA-style** shape with optional loss domain via a sign-power form.")
+
+    alpha = st.slider("Curvature (α). α<1: concave (risk-averse), α=1: linear, α>1: convex (risk-seeking)", 0.2, 2.0, 0.8, 0.05)
+
+    _show_eq("Expected Utility of lottery L = {(x_i, p_i)}", r"\\mathrm{EU}(L) = \\sum_i p_i \\cdot u(x_i)")
+    _show_eq("Utility (sign–power)", r"u(x) = \\operatorname{sign}(x)\\,|x|^{\\alpha}")
+    _show_eq("Probability weighting (identity)", r"w(p) = p")
+
+    # Visuals
+    col1, col2 = _two_cols()
+    with col1:
+        xr = np.linspace(-100, 100, 400)
+        u = np.sign(xr) * (np.abs(xr) ** alpha)
+        _plot_simple(xr, u, "Outcome x", "Utility u(x)", f"Sign–power utility (α={alpha:.2f})")
+
+    with col2:
+        pr = np.linspace(0, 1, 200)
+        _plot_simple(pr, pr, "Probability p", "Weight w(p)", "Identity weighting: w(p)=p")
+
+# ---------------------------------------
+# Prospect Theory (PT)
+# ---------------------------------------
+if page == "Prospect Theory (PT)":
+    st.title("Prospect Theory (PT)")
+    st.markdown("PT uses a **reference-dependent value function** and **nonlinear probability weighting**.")
+
+    st.subheader("Parameters")
+    colA, colB = st.columns(2)
+    with colA:
+        alpha = st.slider("Curvature for gains (α)", 0.2, 1.5, 0.88, 0.02)
+        gamma = st.slider("Weighting (gains) γ", 0.2, 1.5, 0.61, 0.01)
+        ref = st.slider("Reference point r", -50.0, 50.0, 0.0, 1.0)
+    with colB:
+        beta = st.slider("Curvature for losses (β)", 0.2, 1.5, 0.88, 0.02)
+        delta = st.slider("Weighting (losses) δ", 0.2, 1.5, 0.69, 0.01)
+        lam = st.slider("Loss aversion λ", 0.5, 4.0, 2.25, 0.05)
+
+    _show_eq("Value (reference-dependent)", r"v(x) = \begin{cases}(x-r)^{\alpha}, & x \ge r \\ -\lambda\, (r-x)^{\beta}, & x < r\end{cases}")
+    _show_eq("Weighting (TK-1992 form)", r"w_+(p) = \frac{p^{\gamma}}{\left(p^{\gamma} + (1-p)^{\gamma}\right)^{1/\gamma}},\quad w_-(p) = \frac{p^{\delta}}{\left(p^{\delta} + (1-p)^{\delta}\right)^{1/\delta}}")
+
+    # Visuals
+    col1, col2 = _two_cols()
+    with col1:
+        x = np.linspace(-100, 100, 500)
+        v = np.where(x >= ref, (x - ref) ** alpha, -lam * (ref - x) ** beta)
+        _plot_simple(x, v, "Outcome x", "Value v(x)", "Prospect Theory value function")
+
+    with col2:
+        p = np.linspace(0.001, 0.999, 400)
+        w_plus = p ** gamma / ( (p ** gamma + (1 - p) ** gamma) ** (1/gamma) )
+        w_minus = p ** delta / ( (p ** delta + (1 - p) ** delta) ** (1/delta) )
+        _plot_multi(p, [w_plus, w_minus], ["w₊(p) (gains)", "w₋(p) (losses)"], "Probability p", "Weight", "Probability weighting (TK-1992)")
+
+# ---------------------------------------
+# Normalization Techniques
+# ---------------------------------------
+if page == "Normalization Techniques":
+    st.title("Normalization Techniques (Restaurant Prices)")
+    st.markdown(
+        "We transform **prices** into **desirability** scores where higher is better. Because lower prices are preferred, we invert prices via a context-dependent step: ")
+    _show_eq("Price → desirability signal", r"s_i = \max_j p_j - p_i")
+
+    st.subheader("Example contexts")
+    n = st.slider("Number of restaurants", 3, 15, 5)
+
+    # Two contexts: biased low vs biased high
+    colL, colH = st.columns(2)
+    with colL:
+        st.markdown("**Context A (biased low prices)**")
+        low_center = st.slider("A: average price (~)", 5, 20, 10, 1)
+        rng_low = np.random.default_rng(1)
+        prices_low = np.clip(np.round(rng_low.normal(loc=low_center, scale=2.0, size=n), 2), 1.0, None)
+        st.write({f"R{i+1}": float(p) for i, p in enumerate(prices_low)})
+    with colH:
+        st.markdown("**Context B (biased high prices)**")
+        high_center = st.slider("B: average price (~)", 20, 50, 30, 1)
+        rng_high = np.random.default_rng(2)
+        prices_high = np.clip(np.round(rng_high.normal(loc=high_center, scale=3.0, size=n), 2), 1.0, None)
+        st.write({f"R{i+1}": float(p) for i, p in enumerate(prices_high)})
+
+    st.divider()
+    st.subheader("1) Range normalization")
+    _show_eq("Equation (lower price = better)", r"\tilde{x}_i = \dfrac{\max(p) - p_i}{\max(p) - \min(p)}")
+
+    def range_norm(prices):
+        p = np.array(prices, dtype=float)
+        denom = p.max() - p.min()
+        if denom == 0:
+            return np.ones_like(p)
+        return (p.max() - p) / denom
+
+    yA = range_norm(prices_low)
+    yB = range_norm(prices_high)
+
+    idx = np.arange(1, n + 1)
+    col1, col2 = _two_cols()
+    with col1:
+        _plot_simple(idx, yA, "Restaurant index", "Normalized value", "Range norm – Context A (low prices)")
+    with col2:
+        _plot_simple(idx, yB, "Restaurant index", "Normalized value", "Range norm – Context B (high prices)")
+
+    st.divider()
+    st.subheader("2) Divisive normalization")
+    _show_eq("Equation (on desirability s)", r"\tilde{x}_i = \dfrac{s_i}{\sigma + \sum_j s_j},\qquad s_i = \max(p) - p_i")
+
+    sigma = st.slider("Stabilizer σ (divisive)", 0.0, 10.0, 1.0, 0.1)
+
+    def divisive_norm(prices, sigma):
+        s = desirability_from_price(prices)
+        denom = sigma + s.sum()
+        if denom == 0:
+            return np.zeros_like(s)
+        return s / denom
+
+    yA = divisive_norm(prices_low, sigma)
+    yB = divisive_norm(prices_high, sigma)
+
+    col1, col2 = _two_cols()
+    with col1:
+        _plot_simple(idx, yA, "Restaurant index", "Normalized value", "Divisive norm – Context A")
+    with col2:
+        _plot_simple(idx, yB, "Restaurant index", "Normalized value", "Divisive norm – Context B")
+
+    st.divider()
+    st.subheader("3) Recurrent divisive normalization")
+    _show_eq("Fixed point", r"y_i = \dfrac{s_i}{\sigma + \sum_j w_{ij} y_j}\quad\Rightarrow\quad y^{(t+1)}_i = \dfrac{s_i}{\sigma + \sum_j w_{ij} y^{(t)}_j}")
+
+    sigma_rec = st.slider("Stabilizer σ (recurrent)", 0.0, 10.0, 1.0, 0.1)
+    w_off = st.slider("Off-diagonal weight w (0=no interaction, 1=strong)", 0.0, 1.0, 0.5, 0.05)
+    max_iter = st.slider("Max iterations", 5, 200, 50, 5)
+    tol = st.slider("Convergence tol", 1e-6, 1e-2, 1e-4, format="%e")
+
+    def recurrent_divisive_norm(prices, sigma, w_off, max_iter, tol):
+        s = desirability_from_price(prices)
+        n = s.size
+        # Weight matrix: zeros on diagonal, w_off elsewhere
+        W = np.full((n, n), w_off)
+        np.fill_diagonal(W, 0.0)
+        y = np.zeros_like(s)
+        for _ in range(max_iter):
+            denom = sigma + W @ y
+            denom = np.where(denom == 0, np.finfo(float).eps, denom)
+            y_new = s / denom
+            if np.max(np.abs(y_new - y)) < tol:
+                y = y_new
+                break
+            y = y_new
+        return y
+
+    yA = recurrent_divisive_norm(prices_low, sigma_rec, w_off, max_iter, tol)
+    yB = recurrent_divisive_norm(prices_high, sigma_rec, w_off, max_iter, tol)
+
+    col1, col2 = _two_cols()
+    with col1:
+        _plot_simple(idx, yA, "Restaurant index", "Normalized value", "Recurrent divisive norm – Context A")
+    with col2:
+        _plot_simple(idx, yB, "Restaurant index", "Normalized value", "Recurrent divisive norm – Context B")
+
+    st.divider()
+    st.subheader("4) Adaptive gain / logistic value")
+    _show_eq("Logistic transform (lower price = higher value)", r"\tilde{x}_i = \frac{1}{1 + \exp\big(k\,[p_i - r]\big)}")
+
+    k = st.slider("Slope k", 0.01, 2.0, 0.3, 0.01)
+    use_median = st.checkbox("Reference r = median price in context", value=True)
+
+    def logistic_value(prices, k, r=None):
+        p = np.array(prices, dtype=float)
+        if r is None:
+            r = np.median(p)
+        return 1.0 / (1.0 + np.exp(k * (p - r)))
+
+    rA = np.median(prices_low) if use_median else st.number_input("Manual r for A", value=float(np.median(prices_low)))
+    rB = np.median(prices_high) if use_median else st.number_input("Manual r for B", value=float(np.median(prices_high)))
+
+    yA = logistic_value(prices_low, k, rA)
+    yB = logistic_value(prices_high, k, rB)
+
+    col1, col2 = _two_cols()
+    with col1:
+        _plot_simple(idx, yA, "Restaurant index", "Value", f"Adaptive gain (logistic) – Context A (r={rA:.2f})")
+    with col2:
+        _plot_simple(idx, yB, "Restaurant index", "Value", f"Adaptive gain (logistic) – Context B (r={rB:.2f})")
+
+    st.caption("All normalization outputs above are on an arbitrary scale where **higher is better**.")
