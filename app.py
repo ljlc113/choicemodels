@@ -249,171 +249,6 @@ if page == "Prospect Theory (PT)":
 # Normalization Techniques
 # ---------------------------------------
 if page == "Normalization Techniques":
-    st.set_page_config(page_title="Normalization Methods Comparison", layout="wide")
-
-    st.title("Normalization Models of Value – Comparison")
-    st.caption("Draft app that mirrors the behavior of your Colab snippet and lets you tweak inputs interactively.")
-
-    # -----------------------------
-    # Helper: parse arrays from text
-    # -----------------------------
-    def parse_array(s: str) -> np.ndarray:
-        toks = [t for t in s.replace(",", " ").split() if t]
-        try:
-            return np.array([float(t) for t in toks], dtype=float)
-        except Exception:
-            return np.array([], dtype=float)
-
-    # -----------------------------
-    # On-page inputs
-    # -----------------------------
-    st.header("Inputs")
-
-    def_v1 = "1 2 5 10"
-    def_v2 = "1 5 9 10"
-
-    col_in1, col_in2 = st.columns(2)
-    with col_in1:
-        v1_str = st.text_input("v1 (comma/space separated)", value=def_v1)
-    with col_in2:
-        v2_str = st.text_input("v2 (comma/space separated)", value=def_v2)
-
-    col_in3, col_in4 = st.columns([1,1])
-    with col_in3:
-        slope = st.slider("Adaptive gain slope k", 0.05, 2.0, 0.7, 0.05)
-    with col_in4:
-        show_table = st.checkbox("Show numeric table", value=True)
-
-    v1 = parse_array(v1_str)
-    v2 = parse_array(v2_str)
-
-    # Guardrail
-    if v1.size == 0 or v2.size == 0:
-        st.error("Please provide valid numeric arrays for v1 and v2.")
-        st.stop()
-
-    # -----------------------------
-    # Normalization functions
-    # -----------------------------
-    def range_normalization(v: np.ndarray) -> np.ndarray:
-        v = np.asarray(v, dtype=float)
-        if v.size == 0:
-            return v
-        denom = v.max() - v.min()
-        if denom == 0:
-            return np.ones_like(v)
-        return v / denom
-
-
-    def divisive_normalization(v: np.ndarray) -> np.ndarray:
-        v = np.asarray(v, dtype=float)
-        if v.size == 0:
-            return v
-        mu = v.mean()
-        if mu == 0:
-            return np.zeros_like(v)
-        return v / mu
-
-
-    def recurrent_normalization(v: np.ndarray) -> np.ndarray:
-        v = np.asarray(v, dtype=float)
-        if v.size == 0:
-            return v
-        mu = v.mean()
-        return v / (v + mu)
-
-
-    def adaptive_gain(v: np.ndarray, k: float = 0.7) -> np.ndarray:
-        v = np.asarray(v, dtype=float)
-        if v.size == 0:
-            return v
-        mu = v.mean()
-        return 1.0 / (1.0 + np.exp(-(v - mu) * k))
-
-    # -----------------------------
-    # Compute
-    # -----------------------------
-    v1_rn  = range_normalization(v1)
-    v1_dn  = divisive_normalization(v1)
-    v1_rdn = recurrent_normalization(v1)
-    v1_ag  = adaptive_gain(v1, slope)
-
-    v2_rn  = range_normalization(v2)
-    v2_dn  = divisive_normalization(v2)
-    v2_rdn = recurrent_normalization(v2)
-    v2_ag  = adaptive_gain(v2, slope)
-
-    # -----------------------------
-    # Equations
-    # -----------------------------
-    st.markdown("### Equations")
-    colE1, colE2 = st.columns(2)
-    with colE1:
-        st.latex(r"\text{Range: } f(v)=\frac{v}{\max(v)-\min(v)}")
-        st.latex(r"\text{Divisive: } f(v)=\frac{v}{\operatorname{mean}(v)}")
-    with colE2:
-        st.latex(r"\text{Recurrent divisive: } f(v)=\frac{v}{v+\operatorname{mean}(v)}")
-        st.latex(r"\text{Adaptive gain: } f(v)=\frac{1}{1+e^{-(v-\operatorname{mean}(v))\,k}}")
-
-    # -----------------------------
-    # Plots (two panels like your Colab)
-    # -----------------------------
-    fig, ax = plt.subplots(1, 2, figsize=(12, 5), sharey=True)
-
-    # Colors matching your Colab example
-    c_rn = "#F8766D"
-    c_dn = "#7CAE00"
-    c_rdn = "#00BFC4"
-    c_ag = "#C77CFF"
-
-    ax[0].plot(v1, v1_rn,  color=c_rn,  marker='o')
-    ax[0].plot(v1, v1_dn,  color=c_dn,  marker='o')
-    ax[0].plot(v1, v1_rdn, color=c_rdn, marker='o')
-    ax[0].plot(v1, v1_ag,  color=c_ag,  marker='o')
-    ax[0].legend(['range normalization','divisive normalization','recurrent divisive norm','adaptive gain/logistic'])
-    ax[0].set_xlabel('Value')
-    ax[0].set_ylabel('Normalization model output')
-    ax[0].set_title('Normalization models (v1)')
-
-    ax[1].plot(v2, v2_rn,  color=c_rn,  marker='o')
-    ax[1].plot(v2, v2_dn,  color=c_dn,  marker='o')
-    ax[1].plot(v2, v2_rdn, color=c_rdn, marker='o')
-    ax[1].plot(v2, v2_ag,  color=c_ag,  marker='o')
-    ax[1].tick_params(labelleft=True)
-    ax[1].legend(['range normalization','divisive normalization','recurrent divisive norm','adaptive gain/logistic'])
-    ax[1].set_xlabel('Value')
-    ax[1].set_ylabel('Normalization model output')
-    ax[1].set_title('Normalization models (v2)')
-
-    st.pyplot(fig, clear_figure=True)
-
-    # -----------------------------
-    # Optional: table
-    # -----------------------------
-    if show_table:
-        st.markdown("### Numeric comparison table")
-        import pandas as pd
-        df1 = pd.DataFrame({
-            'v1': v1,
-            'range': v1_rn,
-            'divisive': v1_dn,
-            'recurrent': v1_rdn,
-            'adaptive_gain': v1_ag,
-        })
-        df2 = pd.DataFrame({
-            'v2': v2,
-            'range': v2_rn,
-            'divisive': v2_dn,
-            'recurrent': v2_rdn,
-            'adaptive_gain': v2_ag,
-        })
-        st.dataframe(df1, use_container_width=True)
-        st.dataframe(df2, use_container_width=True)
-
-    st.info("Tip: paste different arrays (e.g., low-biased vs high-biased) to see how context shifts each normalization.")
-
-
-if page == "Normalization Techniques":
     st.title("Normalization Techniques (Restaurant Prices)")
 
     st.subheader("Example contexts")
@@ -556,3 +391,167 @@ if page == "Normalization Techniques":
             _plot_simple(idxB, yB, "Restaurant index", "Value", "Adaptive gain (logistic) – Context B")
 
     st.caption("All normalization outputs above are on an arbitrary scale where higher is better.")
+
+if page == "Normalization Techniques":
+    st.set_page_config(page_title="Normalization Methods Comparison", layout="wide")
+
+    st.title("Normalization Models of Value – Comparison")
+    st.caption("Interactive version of the Google Colab that compares the different normalization methods!")
+
+    # -----------------------------
+    # Helper: parse arrays from text
+    # -----------------------------
+    def parse_array(s: str) -> np.ndarray:
+        toks = [t for t in s.replace(",", " ").split() if t]
+        try:
+            return np.array([float(t) for t in toks], dtype=float)
+        except Exception:
+            return np.array([], dtype=float)
+
+    # -----------------------------
+    # On-page inputs
+    # -----------------------------
+    st.header("Inputs")
+
+    def_v1 = "1 2 5 10"
+    def_v2 = "1 5 9 10"
+
+    st.info("Tip: paste different arrays (e.g., low-biased vs high-biased) to see how context shifts each normalization.")
+
+    col_in1, col_in2 = st.columns(2)
+    with col_in1:
+        v1_str = st.text_input("v1 (comma/space separated)", value=def_v1)
+    with col_in2:
+        v2_str = st.text_input("v2 (comma/space separated)", value=def_v2)
+
+    col_in3, col_in4 = st.columns([1,1])
+    with col_in3:
+        slope = st.slider("Adaptive gain slope k", 0.05, 2.0, 0.7, 0.05)
+    with col_in4:
+        show_table = st.checkbox("Show numeric table", value=True)
+
+    v1 = parse_array(v1_str)
+    v2 = parse_array(v2_str)
+
+    # Guardrail
+    if v1.size == 0 or v2.size == 0:
+        st.error("Please provide valid numeric arrays for v1 and v2.")
+        st.stop()
+
+    # -----------------------------
+    # Normalization functions
+    # -----------------------------
+    def range_normalization(v: np.ndarray) -> np.ndarray:
+        v = np.asarray(v, dtype=float)
+        if v.size == 0:
+            return v
+        denom = v.max() - v.min()
+        if denom == 0:
+            return np.ones_like(v)
+        return v / denom
+
+
+    def divisive_normalization(v: np.ndarray) -> np.ndarray:
+        v = np.asarray(v, dtype=float)
+        if v.size == 0:
+            return v
+        mu = v.mean()
+        if mu == 0:
+            return np.zeros_like(v)
+        return v / mu
+
+
+    def recurrent_normalization(v: np.ndarray) -> np.ndarray:
+        v = np.asarray(v, dtype=float)
+        if v.size == 0:
+            return v
+        mu = v.mean()
+        return v / (v + mu)
+
+
+    def adaptive_gain(v: np.ndarray, k: float = 0.7) -> np.ndarray:
+        v = np.asarray(v, dtype=float)
+        if v.size == 0:
+            return v
+        mu = v.mean()
+        return 1.0 / (1.0 + np.exp(-(v - mu) * k))
+
+    # -----------------------------
+    # Compute
+    # -----------------------------
+    v1_rn  = range_normalization(v1)
+    v1_dn  = divisive_normalization(v1)
+    v1_rdn = recurrent_normalization(v1)
+    v1_ag  = adaptive_gain(v1, slope)
+
+    v2_rn  = range_normalization(v2)
+    v2_dn  = divisive_normalization(v2)
+    v2_rdn = recurrent_normalization(v2)
+    v2_ag  = adaptive_gain(v2, slope)
+
+    # -----------------------------
+    # Equations
+    # -----------------------------
+    st.markdown("### Equations")
+    colE1, colE2 = st.columns(2)
+    with colE1:
+        st.latex(r"\text{Range: } f(v)=\frac{v}{\max(v)-\min(v)}")
+        st.latex(r"\text{Divisive: } f(v)=\frac{v}{\operatorname{mean}(v)}")
+    with colE2:
+        st.latex(r"\text{Recurrent divisive: } f(v)=\frac{v}{v+\operatorname{mean}(v)}")
+        st.latex(r"\text{Adaptive gain: } f(v)=\frac{1}{1+e^{-(v-\operatorname{mean}(v))\,k}}")
+
+    # -----------------------------
+    # Plots (two panels like your Colab)
+    # -----------------------------
+    fig, ax = plt.subplots(1, 2, figsize=(12, 5), sharey=True)
+
+    # Colors matching your Colab example
+    c_rn = "#F8766D"
+    c_dn = "#7CAE00"
+    c_rdn = "#00BFC4"
+    c_ag = "#C77CFF"
+
+    ax[0].plot(v1, v1_rn,  color=c_rn,  marker='o')
+    ax[0].plot(v1, v1_dn,  color=c_dn,  marker='o')
+    ax[0].plot(v1, v1_rdn, color=c_rdn, marker='o')
+    ax[0].plot(v1, v1_ag,  color=c_ag,  marker='o')
+    ax[0].legend(['range normalization','divisive normalization','recurrent divisive norm','adaptive gain/logistic'])
+    ax[0].set_xlabel('Value')
+    ax[0].set_ylabel('Normalization model output')
+    ax[0].set_title('Normalization models (v1)')
+
+    ax[1].plot(v2, v2_rn,  color=c_rn,  marker='o')
+    ax[1].plot(v2, v2_dn,  color=c_dn,  marker='o')
+    ax[1].plot(v2, v2_rdn, color=c_rdn, marker='o')
+    ax[1].plot(v2, v2_ag,  color=c_ag,  marker='o')
+    ax[1].tick_params(labelleft=True)
+    ax[1].legend(['range normalization','divisive normalization','recurrent divisive norm','adaptive gain/logistic'])
+    ax[1].set_xlabel('Value')
+    ax[1].set_ylabel('Normalization model output')
+    ax[1].set_title('Normalization models (v2)')
+
+    st.pyplot(fig, clear_figure=True)
+
+    # -----------------------------
+    # Optional: table
+    # -----------------------------
+    if show_table:
+        st.markdown("### Numeric comparison table")
+        import pandas as pd
+        df1 = pd.DataFrame({
+            'v1': v1,
+            'range': v1_rn,
+            'divisive': v1_dn,
+            'recurrent': v1_rdn,
+            'adaptive_gain': v1_ag,
+        })
+        df2 = pd.DataFrame({
+            'v2': v2,
+            'range': v2_rn,
+            'divisive': v2_dn,
+            'recurrent': v2_rdn,
+            'adaptive_gain': v2_ag,
+        })
+        st.dataframe(df1, use_container_width=True)
+        st.dataframe(df2, use_container_width=True)
