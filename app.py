@@ -51,13 +51,6 @@ def _plot_multi(x, ys, labels, xlabel, ylabel, title):
     st.pyplot(fig, clear_figure=True)
 
 
-def desirability_from_price(prices):
-    # Convert prices (lower=better) to a nonnegative desirability signal s_i
-    prices = np.array(prices, dtype=float)
-    s = prices.max() - prices
-    return s
-
-
 # ---------------------------------------
 # Overview
 # ---------------------------------------
@@ -257,11 +250,8 @@ if page == "Prospect Theory (PT)":
 # ---------------------------------------
 if page == "Normalization Techniques":
     st.title("Normalization Techniques (w/ example of Restaurant Prices)")
-    st.markdown(
-        "We transform **prices** into **desirability** scores where higher is better. Because lower prices are preferred, we invert prices via a context-dependent step: ")
-    _show_eq("Price → desirability signal", r"s_i = \\max_j p_j - p_i")
 
-    st.subheader("Example contexts")
+    st.subheader("Example context:")
     n = st.slider("Number of restaurants", 3, 15, 5)
 
     # Two contexts: biased low vs biased high
@@ -312,11 +302,11 @@ if page == "Normalization Techniques":
     sigma = st.slider("Stabilizer σ (divisive)", 0.0, 10.0, 1.0, 0.1)
 
     def divisive_norm(prices, sigma):
-        s = desirability_from_price(prices)
-        denom = sigma + s.mean() * len(s)
+        p = np.array(prices, dtype=float)
+        denom = sigma + p.mean() * len(p)
         if denom == 0:
-            return np.zeros_like(s)
-        return s / denom
+            return np.zeros_like(p)
+        return p / denom
 
     yA = divisive_norm(prices_low, sigma)
     yB = divisive_norm(prices_high, sigma)
@@ -330,13 +320,13 @@ if page == "Normalization Techniques":
     st.divider()
     st.subheader("3) Recurrent divisive normalization")
     st.markdown("Normalizes by the value itself plus the mean. Outputs bound between 0 and 1. Nonlinear: larger values flatten, emphasizing smaller differences among big numbers.")
-    st.latex(r"f(v) = \\=frac{v}{v + \text{mean}(v)}")
+    st.latex(r"f(v) = \frac{v}{v + \text{mean}(v)}")
     st.caption("Intuition: Relative strength compared to background context — explains context-dependent perception.")
 
     def recurrent_divisive_norm(prices):
-        v = desirability_from_price(prices)
-        mean_v = v.mean()
-        return v / (v + mean_v)
+       p = np.array(prices, dtype=float)
+       mean_p = p.mean()
+       return p / (p + mean_p) 
 
     yA = recurrent_divisive_norm(prices_low)
     yB = recurrent_divisive_norm(prices_high)
@@ -356,9 +346,9 @@ if page == "Normalization Techniques":
     k = st.slider("Slope k", 0.01, 2.0, 0.3, 0.01)
 
     def logistic_value(prices, k):
-        v = desirability_from_price(prices)
-        r = np.mean(v)
-        return 1.0 / (1.0 + np.exp(-(v - r) * k))
+        p = np.array(prices, dtype=float)
+        r = np.mean(p)
+        return 1.0 / (1.0 + np.exp(-(p - r) * k))
 
     yA = logistic_value(prices_low, k)
     yB = logistic_value(prices_high, k)
