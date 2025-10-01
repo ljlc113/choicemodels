@@ -135,146 +135,16 @@ if page == "Expected Value (EV)":
 # ---------------------------------------
 # Expected Utility (EU)
 # ---------------------------------------
-if page == "Expected Utility (EU)":
-    st.markdown("---")
-    st.header("Expected Utility (Draft)")
-
-    st.markdown(
-        "This section implements Expected Utility with a sign–power utility function: "
-        "`return (1 if v >= 0 else -1) * (abs(v) ** alpha)` and identity probability weighting `w(p)=p`."
-    )
-
-    # --- Parameters & inputs ---
-    colP1, colP2, colP3 = st.columns(3)
-    with colP1:
-        alpha = st.slider("Utility curvature α", 0.2, 2.0, 0.88, 0.02)
-    with colP2:
-        v_lottery = st.number_input("Lottery payoff (v_lottery)", value=100000.0, step=1000.0)
-        p_lottery = st.number_input("Lottery probability (p_lottery)", value=0.0001, min_value=0.0, max_value=1.0, step=0.0001, format="%.4f")
-    with colP3:
-        v_gamble1 = st.number_input("Gamble outcome 1 (gain)", value=55.0, step=1.0)
-        v_gamble2 = st.number_input("Gamble outcome 2 (loss)", value=-50.0, step=1.0)
-        p_gamble = st.number_input("Gamble probability for outcome 1", value=0.5, min_value=0.0, max_value=1.0, step=0.05)
-
-    # --- Core functions ---
-    def utility_function(v, alpha=0.88):
-        return (1 if v >= 0 else -1) * (abs(v) ** alpha)
-
-    def EU(p, u1, u2=0):
-        return p * u1 + (1 - p) * u2
-
-    # --- Show equations used ---
-    colEq1, colEq2 = st.columns(2)
-    with colEq1:
-        st.latex(r"u(v) = (1 \; \text{if } v \ge 0 \; \text{else } -1)\cdot |v|^{\alpha}")
-    with colEq2:
-        st.latex(r"EU = p\,u(v_1) + (1-p)\,u(v_2)")
-
-    # --- Plot utility function on [0, 50] ---
-    v_min, v_max, v_step = 0, 50, 10
-    v = np.arange(v_min, v_max + v_step, v_step)
-    u = np.array([utility_function(val, alpha) for val in v], dtype=float)
-
-    fig_u, ax_u = plt.subplots()
-    ax_u.plot(v, u, marker='o')
-    ax_u.plot([v_min, v_max], [v_min, v_max], color='gray', ls=':', label='u(v)=v (linear ref)')
-    ax_u.set_xlabel('Value v')
-    ax_u.set_ylabel('Utility u(v)')
-    ax_u.set_title('Utility function (0–50)')
-    ax_u.legend()
-    st.pyplot(fig_u, clear_figure=True)
-
-    # --- Subjective spacing & sensitivity ---
-    # Compare u(10)-u(0) vs u(50)-u(40)
-    uv0, uv10, uv40, uv50 = [utility_function(x, alpha) for x in (0, 10, 40, 50)]
-    span_0_10 = uv10 - uv0
-    span_40_50 = uv50 - uv40
-
-    # Marginal sensitivity over a finer grid (v>0)
-    vv = np.linspace(0.001, 50, 500)
-    # derivative du/dv for gains: alpha * v^(alpha-1)
-    dudv = alpha * (vv ** (alpha - 1))
-    max_idx = int(np.argmax(dudv))
-    most_sensitive_at = vv[max_idx]
-
-    colS1, colS2, colS3 = st.columns(3)
-    colS1.metric("Δu (0→10)", f"{span_0_10:.3g}")
-    colS2.metric("Δu (40→50)", f"{span_40_50:.3g}")
-    colS3.metric("Max sensitivity at v≈", f"{most_sensitive_at:.2f}")
-
-    if np.isclose(span_0_10, span_40_50, rtol=1e-6, atol=1e-9):
-        st.info("Subjective differences are ~the same between 0–10 and 40–50.")
-    else:
-        bigger = "0–10" if span_0_10 > span_40_50 else "40–50"
-        st.info(f"Subjective difference is larger for {bigger} (with α={alpha:.2f}).")
-
-    # Optional: show marginal utility curve
-    fig_mu, ax_mu = plt.subplots()
-    ax_mu.plot(vv, dudv)
-    ax_mu.set_xlabel('Value v (gains)')
-    ax_mu.set_ylabel('Marginal utility du/dv')
-    ax_mu.set_title('Where sensitivity is highest (du/dv)')
-    st.pyplot(fig_mu, clear_figure=True)
-
-    # --- EU calculations for the two scenarios ---
-    # Lottery: p_lottery chance of v_lottery, else 0
-    u_lottery = utility_function(v_lottery, alpha)
-    eu_lottery = EU(p_lottery, u1=u_lottery, u2=utility_function(0, alpha))
-
-    # Gamble: p_gamble chance of v_gamble1, (1-p) of v_gamble2
-    u_g1 = utility_function(v_gamble1, alpha)
-    u_g2 = utility_function(v_gamble2, alpha)
-    eu_gamble = EU(p_gamble, u1=u_g1, u2=u_g2)
-
-    colEU1, colEU2 = st.columns(2)
-    with colEU1:
-        st.subheader("Lottery")
-        st.write(f"p = {p_lottery:.4f}, payoff = {v_lottery:.0f}")
-        st.latex(r"EU_{lottery} = p\,u(v) + (1-p)\,u(0)")
-        st.metric("EU (lottery)", f"{eu_lottery:.3g}")
-    with colEU2:
-        st.subheader("50–50 Gamble")
-        st.write(f"p = {p_gamble:.2f}, outcomes = {v_gamble1:.0f} and {v_gamble2:.0f}")
-        st.latex(r"EU_{gamble} = p\,u(v_1) + (1-p)\,u(v_2)")
-        st.metric("EU (gamble)", f"{eu_gamble:.3g}")
-
-    # --- Should you pursue each according to EU? ---
-    # Compare each EU against status-quo u(0)=0
-    u_status_quo = utility_function(0, alpha)
-
-    def decision_text(eu_val: float) -> str:
-        if eu_val > u_status:
-            return "Pursue (EU > status quo)"
-        elif eu_val < u_status:
-            return "Do NOT pursue (EU < status quo)"
-        return "Indifferent (EU ≈ status quo)"
-
-    u_status = u_status_quo
-    colD1, colD2 = st.columns(2)
-    colD1.success(decision_text(eu_lottery))
-    colD2.success(decision_text(eu_gamble))
-
-    # --- What changed and why? ---
-    st.markdown("### What changed and why?")
-    st.markdown(
-        "- When **α < 1** (concave for gains), marginal utility is higher near 0 and falls with v. "
-        "This makes large payoffs (like the lottery) contribute less utility than their face value, "
-        "so EU can be modest despite a large prize."
-        "- The 50–50 gamble combines a moderate gain and a loss. The sign–power utility makes losses count with the same curvature; "
-        "their disutility can outweigh the gain depending on α, shifting the EU and the decision.")
-
 
 if page == "Expected Utility (EU)":
     st.title("Expected Utility (EU)")
     st.markdown(
-        "EU allows **nonlinear utility**. We use a sign–power (CRRA-style) function "
-        "implemented exactly as: `return (1 if v >= 0 else -1) * (abs(v) ** alpha)`."
+        "EU allows **nonlinear utility**. We use a sign–power (CRRA-style) function that takes the absolute value (to account for negative value) raised to the power of α>1, to reflect diminishing marginal returns."
     )
 
     alpha = st.slider("Curvature α", 0.2, 2.0, 0.8, 0.05)
 
-    _show_eq("Expected Utility of lottery L = {(x_i, p_i)}",
-             r"EU(L) = \sum_i p_i \cdot u(x_i)")
+    st.latex(r"EU(v) = |v|^{\alpha}")
 
     # Equations right above their corresponding graphs (side by side)
     col_eq1, col_eq2 = st.columns(2)
