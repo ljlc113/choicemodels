@@ -250,6 +250,7 @@ if page == "Prospect Theory (PT)":
 # ---------------------------------------
 if page == "Normalization Techniques":
     st.set_page_config(page_title="Normalization Methods Comparison", layout="wide")
+
     st.title("Normalization Models of Value – Comparison")
     st.caption("Draft app that mirrors the behavior of your Colab snippet and lets you tweak inputs interactively.")
 
@@ -264,16 +265,24 @@ if page == "Normalization Techniques":
             return np.array([], dtype=float)
 
     # -----------------------------
-    # Sidebar inputs
+    # On-page inputs
     # -----------------------------
-    st.sidebar.header("Inputs")
+    st.header("Inputs")
+
     def_v1 = "1 2 5 10"
     def_v2 = "1 5 9 10"
 
-    v1_str = st.sidebar.text_input("v1 (comma/space separated)", value=def_v1)
-    v2_str = st.sidebar.text_input("v2 (comma/space separated)", value=def_v2)
-    slope = st.sidebar.slider("Adaptive gain slope k", 0.05, 2.0, 0.7, 0.05)
-    show_table = st.sidebar.checkbox("Show numeric table", value=True)
+    col_in1, col_in2 = st.columns(2)
+    with col_in1:
+        v1_str = st.text_input("v1 (comma/space separated)", value=def_v1)
+    with col_in2:
+        v2_str = st.text_input("v2 (comma/space separated)", value=def_v2)
+
+    col_in3, col_in4 = st.columns([1,1])
+    with col_in3:
+        slope = st.slider("Adaptive gain slope k", 0.05, 2.0, 0.7, 0.05)
+    with col_in4:
+        show_table = st.checkbox("Show numeric table", value=True)
 
     v1 = parse_array(v1_str)
     v2 = parse_array(v2_str)
@@ -401,7 +410,8 @@ if page == "Normalization Techniques":
         st.dataframe(df1, use_container_width=True)
         st.dataframe(df2, use_container_width=True)
 
-    st.sidebar.info("Tip: paste different arrays (e.g., low-biased vs high-biased) to see how context shifts each normalization.")
+    st.info("Tip: paste different arrays (e.g., low-biased vs high-biased) to see how context shifts each normalization.")
+
 
 if page == "Normalization Techniques":
     st.title("Normalization Techniques (Restaurant Prices)")
