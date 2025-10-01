@@ -53,7 +53,6 @@ def _plot_multi(x, ys, labels, xlabel, ylabel, title):
 
 def desirability_from_price(prices):
     # Convert prices (lower=better) to a nonnegative desirability signal s_i
-    # s_i = max(p) - p_i, then rescaled to [0, 1] if needed downstream
     prices = np.array(prices, dtype=float)
     s = prices.max() - prices
     return s
@@ -74,26 +73,55 @@ if page == "Overview":
         - **Expected Utility (EU):** nonlinear utility over outcomes.
         - **Prospect Theory (PT):** reference-dependent value and nonlinear probability weighting.
 
-        **Normalization techniques** (applied to an example of choosing between restaurants by price — *lower is better*):
+        **Normalization techniques** (applied to choosing between restaurants by price — *lower is better*):
         - **Range normalization**
         - **Divisive normalization**
         - **Recurrent divisive normalization**
         - **Adaptive gain / logistic value**
         """
     )
-    st.info("Use the sidebar to visit the model- or normalization-specific pages. Sliders let you change parameters and immediately see the equations and curves update.")
+    st.info("Use the sidebar to visit each page. Sliders let you change parameters and immediately see the equations and curves update.")
 
 # ---------------------------------------
 # Expected Value (EV)
 # ---------------------------------------
 if page == "Expected Value (EV)":
     st.title("Expected Value (EV)")
-    st.markdown(
-        "EV assumes **linear utility** and **linear probability weighting**. It simply multiplies outcomes by their probabilities and sums.")
+    st.markdown("EV assumes **linear utility** and **linear probability weighting**. It computes the average value weighted by probabilities.")
 
-    _show_eq("EV of a lottery L = {(x_i, p_i)}", r"\\mathrm{EV}(L) = \\sum_i p_i \\cdot x_i")
+    _show_eq("EV of two-outcome lottery", r"\\mathrm{EV} = p \\cdot v_1 + (1 - p) \\cdot v_2")
     _show_eq("Utility (linear)", r"u(x) = x")
     _show_eq("Probability weighting (identity)", r"w(p) = p")
+
+    # Inputs for two-outcome lottery (user-controlled)
+    st.subheader("Two-outcome Lottery (interactive)")
+    v1 = st.slider("Value v1", -100.0, 100.0, 50.0, 1.0)
+    v2 = st.slider("Value v2", -100.0, 100.0, 0.0, 1.0)
+    p = st.slider("Probability p for v1", 0.0, 1.0, 0.5, 0.01)
+    ev_value = p * v1 + (1 - p) * v2
+    st.metric("Expected Value", f"{ev_value:.2f}")
+
+    st.divider()
+    st.subheader("Worked examples")
+    # Example 1: Lottery ticket .01% chance to win 100,000
+    p1 = 0.0001
+    v1_1, v2_1 = 100_000.0, 0.0
+    ev1 = p1 * v1_1 + (1 - p1) * v2_1
+
+    # Example 2: 50% chance +55, 50% chance -50
+    p2 = 0.5
+    v1_2, v2_2 = 55.0, -50.0
+    ev2 = p2 * v1_2 + (1 - p2) * v2_2
+
+    colA, colB = st.columns(2)
+    with colA:
+        st.markdown("**Lottery ticket:** 0.01% chance to win 100,000; otherwise 0")
+        st.latex(r"\\mathrm{EV} = 0.0001 \times 100{,}000 + 0.9999 \times 0 = 10")
+        st.metric("EV", f"{ev1:.2f}")
+    with colB:
+        st.markdown("**50–50 gamble:** +55 with 50%, −50 with 50%")
+        st.latex(r"\\mathrm{EV} = 0.5 \times 55 + 0.5 \times (-50) = 2.5")
+        st.metric("EV", f"{ev2:.2f}")
 
     # Visuals
     col1, col2 = _two_cols()
@@ -110,9 +138,9 @@ if page == "Expected Value (EV)":
 # ---------------------------------------
 if page == "Expected Utility (EU)":
     st.title("Expected Utility (EU)")
-    st.markdown("EU allows **nonlinear utility**. Below we use a **power/CRRA-style** shape with optional loss domain via a sign-power form.")
+    st.markdown("EU allows **nonlinear utility**. Below we use a **sign–power/CRRA-style** shape.")
 
-    alpha = st.slider("Curvature (α). α<1: concave (risk-averse), α=1: linear, α>1: convex (risk-seeking)", 0.2, 2.0, 0.8, 0.05)
+    alpha = st.slider("Curvature (α). α<1: concave, α=1: linear, α>1: convex", 0.2, 2.0, 0.8, 0.05)
 
     _show_eq("Expected Utility of lottery L = {(x_i, p_i)}", r"\\mathrm{EU}(L) = \\sum_i p_i \\cdot u(x_i)")
     _show_eq("Utility (sign–power)", r"u(x) = \\operatorname{sign}(x)\\,|x|^{\\alpha}")
@@ -128,6 +156,31 @@ if page == "Expected Utility (EU)":
     with col2:
         pr = np.linspace(0, 1, 200)
         _plot_simple(pr, pr, "Probability p", "Weight w(p)", "Identity weighting: w(p)=p")
+
+    st.divider()
+    st.subheader("Worked examples (EU)")
+
+    def u(x):
+        x = np.asarray(x, dtype=float)
+        return np.sign(x) * (np.abs(x) ** alpha)
+
+    # Example 1: 0.01% to win 100,000; otherwise 0
+    p1 = 0.0001
+    EU1 = p1 * u(100_000.0) + (1 - p1) * u(0.0)
+
+    # Example 2: 50% +55, 50% -50
+    p2 = 0.5
+    EU2 = p2 * u(55.0) + (1 - p2) * u(-50.0)
+
+    colA, colB = st.columns(2)
+    with colA:
+        st.markdown("**Lottery ticket:** 0.01% chance to win 100,000")
+        st.latex(r"\\mathrm{EU} = w(p)u(100{,}000) + w(1-p)u(0),\\; w(p)=p")
+        st.metric("EU (utils)", f"{EU1:.3g}")
+    with colB:
+        st.markdown("**50–50 gamble:** +55 / −50")
+        st.latex(r"\\mathrm{EU} = 0.5\,u(55) + 0.5\,u(-50)")
+        st.metric("EU (utils)", f"{EU2:.3g}")
 
 # ---------------------------------------
 # Prospect Theory (PT)
@@ -162,6 +215,39 @@ if page == "Prospect Theory (PT)":
         w_plus = p ** gamma / ( (p ** gamma + (1 - p) ** gamma) ** (1/gamma) )
         w_minus = p ** delta / ( (p ** delta + (1 - p) ** delta) ** (1/delta) )
         _plot_multi(p, [w_plus, w_minus], ["w₊(p) (gains)", "w₋(p) (losses)"], "Probability p", "Weight", "Probability weighting (TK-1992)")
+
+    st.divider()
+    st.subheader("Worked examples (PT)")
+
+    def v_fn(x):
+        x = np.asarray(x, dtype=float)
+        return np.where(x >= ref, (x - ref) ** alpha, -lam * (ref - x) ** beta)
+
+    def w_plus_fn(p):
+        p = np.asarray(p, dtype=float)
+        return p ** gamma / ((p ** gamma + (1 - p) ** gamma) ** (1 / gamma))
+
+    def w_minus_fn(p):
+        p = np.asarray(p, dtype=float)
+        return p ** delta / ((p ** delta + (1 - p) ** delta) ** (1 / delta))
+
+    # Example 1: 0.01% to win 100,000; else 0
+    p1 = 0.0001
+    PT1 = w_plus_fn(p1) * v_fn(100_000.0) + w_minus_fn(1 - p1) * v_fn(0.0)
+
+    # Example 2: 50% +55, 50% -50
+    p2 = 0.5
+    PT2 = w_plus_fn(p2) * v_fn(55.0) + w_minus_fn(1 - p2) * v_fn(-50.0)
+
+    colA, colB = st.columns(2)
+    with colA:
+        st.markdown("**Lottery ticket:** 0.01% chance to win 100,000")
+        st.latex(r"\\mathrm{PT} = w_+(0.0001)\,v(100{,}000) + w_-(0.9999)\,v(0)")
+        st.metric("PT value (utils)", f"{PT1:.3g}")
+    with colB:
+        st.markdown("**50–50 gamble:** +55 / −50")
+        st.latex(r"\\mathrm{PT} = w_+(0.5)\,v(55) + w_-(0.5)\,v(-50)")
+        st.metric("PT value (utils)", f"{PT2:.3g}")
 
 # ---------------------------------------
 # Normalization Techniques
@@ -245,7 +331,6 @@ if page == "Normalization Techniques":
     def recurrent_divisive_norm(prices, sigma, w_off, max_iter, tol):
         s = desirability_from_price(prices)
         n = s.size
-        # Weight matrix: zeros on diagonal, w_off elsewhere
         W = np.full((n, n), w_off)
         np.fill_diagonal(W, 0.0)
         y = np.zeros_like(s)
