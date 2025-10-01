@@ -330,15 +330,11 @@ if page == "Normalization Comparisons":
     # Summary box: means and ranges for v1 and v2
     # -----------------------------
     st.markdown("### Summary: Mean and Range")
-    col_sum1, col_sum2 = st.columns(2)
-    with col_sum1:
-        st.markdown("**v1 summary**")
-        st.metric("Mean (v1)", f"{np.mean(v1):.3g}")
-        st.metric("Range (max−min)", f"{(np.max(v1) - np.min(v1)):.3g}")
-    with col_sum2:
-        st.markdown("**v2 summary**")
-        st.metric("Mean (v2)", f"{np.mean(v2):.3g}")
-        st.metric("Range (max−min)", f"{(np.max(v2) - np.min(v2)):.3g}")
+    col_sum = st.columns(4)
+    col_sum[0].metric("Mean v1", f"{np.mean(v1):.2f}")
+    col_sum[1].metric("Range v1", f"{(np.max(v1) - np.min(v1)):.2f}")
+    col_sum[2].metric("Mean v2", f"{np.mean(v2):.2f}")
+    col_sum[3].metric("Range v2", f"{(np.max(v2) - np.min(v2)):.2f}")
 
     # -----------------------------
     # Normalization functions
