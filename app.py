@@ -85,13 +85,12 @@ if page == "Overview":
 # ---------------------------------------
 # Expected Value (EV)
 # ---------------------------------------
+
 if page == "Expected Value (EV)":
     st.title("Expected Value (EV)")
-    st.markdown("EV assumes **linear utility** and **linear probability weighting**. It computes the average value weighted by probabilities.")
+    st.markdown("EV assumes **linear utility** and **linear probability weighting**. It is computed by multiplying the value of an outcome by its probability.")
 
-    _show_eq("EV of two-outcome lottery", r"EV = p \times v_1 + (1 - p) \times v_2")
-    _show_eq("Utility (linear)", r"u(x) = x")
-    _show_eq("Probability weighting (identity)", r"w(p) = p")
+    _show_eq("EV of two-outcome lottery, where v1 = probability p and v2 = probability 1-p", r"EV = p \times v_1 + (1 - p) \times v_2")
 
     # Inputs for two-outcome lottery (user-controlled)
     st.subheader("Two-outcome Lottery (interactive)")
@@ -123,13 +122,15 @@ if page == "Expected Value (EV)":
         st.latex(r"\\mathrm{EV} = 0.5 \times 55 + 0.5 \times (-50) = 2.5")
         st.metric("EV", f"{ev2:.2f}")
 
-    # Visuals
+    # Utility and probability equations with their graphs side by side
     col1, col2 = _two_cols()
     with col1:
+        st.latex(r"u(x) = x")
         xr = np.linspace(-100, 100, 400)
         _plot_simple(xr, xr, "Outcome x", "Utility u(x)", "Linear utility: u(x)=x")
 
     with col2:
+        st.latex(r"w(p) = p")
         pr = np.linspace(0, 1, 200)
         _plot_simple(pr, pr, "Probability p", "Weight w(p)", "Identity weighting: w(p)=p")
 
