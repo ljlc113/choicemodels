@@ -323,15 +323,15 @@ if page == "Normalization Comparisons":
 
     # Guardrail
     if v1.size == 0 or v2.size == 0:
-        st.error("Please provide valid numeric arrays for v1 and v2.")
+        st.error("Please provide valid numeric arrays for Restaurant Group 1 and Restaurant Group 2.")
         st.stop()
         
     # Inline summary right under inputs
     col_sum = st.columns(4)
-    col_sum[0].metric("Mean v1", f"{np.mean(v1):.2f}")
-    col_sum[1].metric("Range v1", f"{(np.max(v1) - np.min(v1)):.2f}")
-    col_sum[2].metric("Mean v2", f"{np.mean(v2):.2f}")
-    col_sum[3].metric("Range v2", f"{(np.max(v2) - np.min(v2)):.2f}")
+    col_sum[0].metric("Mean G1", f"{np.mean(v1):.2f}")
+    col_sum[1].metric("Range G1", f"{(np.max(v1) - np.min(v1)):.2f}")
+    col_sum[2].metric("Mean G2", f"{np.mean(v2):.2f}")
+    col_sum[3].metric("Range G2", f"{(np.max(v2) - np.min(v2)):.2f}")
 
     # -----------------------------
     # Normalization functions
@@ -385,20 +385,9 @@ if page == "Normalization Comparisons":
     v2_ag  = adaptive_gain(v2, slope)
 
     # -----------------------------
-    # Equations
-    # -----------------------------
-    st.markdown("### Equations")
-    colE1, colE2 = st.columns(2)
-    with colE1:
-        st.latex(r"\text{Range: } f(v)=\frac{v}{\max(v)-\min(v)}")
-        st.latex(r"\text{Divisive: } f(v)=\frac{v}{\operatorname{mean}(v)}")
-    with colE2:
-        st.latex(r"\text{Recurrent divisive: } f(v)=\frac{v}{v+\operatorname{mean}(v)}")
-        st.latex(r"\text{Adaptive gain: } f(v)=\frac{1}{1+e^{-(v-\operatorname{mean}(v))\,k}}")
-
-    # -----------------------------
     # Plots (two panels like your Colab)
     # -----------------------------
+    st.markdown("### Plots")
     fig, ax = plt.subplots(1, 2, figsize=(12, 5), sharey=True)
 
     # Colors matching your Colab example
@@ -450,3 +439,15 @@ if page == "Normalization Comparisons":
         })
         st.dataframe(df1, use_container_width=True)
         st.dataframe(df2, use_container_width=True)
+
+     # -----------------------------
+    # Equations
+    # -----------------------------
+    st.markdown("### Equations")
+    colE1, colE2 = st.columns(2)
+    with colE1:
+        st.latex(r"\text{Range: } f(v)=\frac{v}{\max(v)-\min(v)}")
+        st.latex(r"\text{Divisive: } f(v)=\frac{v}{\operatorname{mean}(v)}")
+    with colE2:
+        st.latex(r"\text{Recurrent divisive: } f(v)=\frac{v}{v+\operatorname{mean}(v)}")
+        st.latex(r"\text{Adaptive gain: } f(v)=\frac{1}{1+e^{-(v-\operatorname{mean}(v))\,k}}")
