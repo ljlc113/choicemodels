@@ -166,24 +166,26 @@ if page == "Expected Utility (EU)":
 
     def u_func(v, alpha):
         return (1 if v >= 0 else -1) * (abs(v) ** alpha)
+    def EU_value(p, x1, x2):
+        return p * u_func(x1, alpha) + (1 - p) * u_func(x2, alpha)
 
-    # Example 1: 0.01% to win 100,000; otherwise 0
+    # Example 1: Lottery ticket — 0.01% win 100,000; else 0
     p1 = 0.0001
-    EU1 = p1 * u_func(100_000.0, alpha) + (1 - p1) * u_func(0.0, alpha)
+    EU1 = EU_value(p1, 100_000.0, 0.0)
 
-    # Example 2: 50% +55, 50% -50
+    # Example 2: 50–50 gamble: +55 / −50
     p2 = 0.5
-    EU2 = p2 * u_func(55.0, alpha) + (1 - p2) * u_func(-50.0, alpha)
+    EU2 = EU_value(p2, 55.0, -50.0)
 
     colA, colB = st.columns(2)
     with colA:
-        st.markdown("**Lottery ticket:** 0.01% chance to win 100,000")
-        st.latex(r"EU = 0.0001\,u(100{,}000) + 0.9999\,u(0)")
-        st.metric("EU (utils)", f"{EU1:.3g}")
+        st.markdown("**Lottery ticket:** 0.01% chance to win 100,000; otherwise 0")
+        st.latex(r"EU = p\,u(100{,}000) + (1-p)\,u(0)")
+        st.metric("EU (lottery)", f"{EU1:.2f}")  # -> 2.51 when α = 0.88
     with colB:
-        st.markdown("**50–50 gamble:** +55 / −50")
+        st.markdown("**50–50 gamble:** +55 with 50%, −50 with 50%")
         st.latex(r"EU = 0.5\,u(55) + 0.5\,u(-50)")
-        st.metric("EU (utils)", f"{EU2:.3g}")
+        st.metric("EU (gamble)", f"{EU2:.2f}")  # -> 1.37 when α = 0.88
 
 # ---------------------------------------
 # Prospect Theory (PT)
