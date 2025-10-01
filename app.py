@@ -122,6 +122,8 @@ if page == "Expected Value (EV)":
         st.latex(r"\\mathrm{EV} = 0.5 \times 55 + 0.5 \times (-50) = 2.5")
         st.metric("EV", f"{ev2:.2f}")
 
+    st.divider()
+    st.subheader("Graphics of EV utility and probability weighting functions:")
     # Utility and probability equations with their graphs side by side
     col1, col2 = _two_cols()
     with col1:
