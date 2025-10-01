@@ -326,10 +326,7 @@ if page == "Normalization Comparisons":
         st.error("Please provide valid numeric arrays for v1 and v2.")
         st.stop()
         
-    # -----------------------------
-    # Summary box: means and ranges for v1 and v2
-    # -----------------------------
-    st.markdown("### Summary: Mean and Range")
+    # Inline summary right under inputs
     col_sum = st.columns(4)
     col_sum[0].metric("Mean v1", f"{np.mean(v1):.2f}")
     col_sum[1].metric("Range v1", f"{(np.max(v1) - np.min(v1)):.2f}")
