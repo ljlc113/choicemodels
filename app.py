@@ -259,7 +259,7 @@ if page == "Normalization Techniques":
     st.title("Normalization Techniques (Restaurant Prices)")
     st.markdown(
         "We transform **prices** into **desirability** scores where higher is better. Because lower prices are preferred, we invert prices via a context-dependent step: ")
-    _show_eq("Price → desirability signal", r"s_i = \max_j p_j - p_i")
+    _show_eq("Price → desirability signal", r"s_i = \\max_j p_j - p_i")
 
     st.subheader("Example contexts")
     n = st.slider("Number of restaurants", 3, 15, 5)
@@ -279,9 +279,13 @@ if page == "Normalization Techniques":
         prices_high = np.clip(np.round(rng_high.normal(loc=high_center, scale=3.0, size=n), 2), 1.0, None)
         st.write({f"R{i+1}": float(p) for i, p in enumerate(prices_high)})
 
+    idx = np.arange(1, n + 1)
+
     st.divider()
     st.subheader("1) Range normalization")
-    _show_eq("Equation (lower price = better)", r"\tilde{x}_i = \dfrac{\max(p) - p_i}{\max(p) - \min(p)}")
+    st.markdown("Scales each value by the total range. Sensitive to extremes; if one value is big, everything else looks small. Linear mapping.")
+    _show_eq("Equation", r"f(v) = \\frac{v}{\\max(v) - \\min(v)}")
+    st.caption("Intuition: How big is this value compared to the total spread?")
 
     def range_norm(prices):
         p = np.array(prices, dtype=float)
@@ -293,22 +297,23 @@ if page == "Normalization Techniques":
     yA = range_norm(prices_low)
     yB = range_norm(prices_high)
 
-    idx = np.arange(1, n + 1)
     col1, col2 = _two_cols()
     with col1:
-        _plot_simple(idx, yA, "Restaurant index", "Normalized value", "Range norm – Context A (low prices)")
+        _plot_simple(idx, yA, "Restaurant index", "Normalized value", "Range norm – Context A")
     with col2:
-        _plot_simple(idx, yB, "Restaurant index", "Normalized value", "Range norm – Context B (high prices)")
+        _plot_simple(idx, yB, "Restaurant index", "Normalized value", "Range norm – Context B")
 
     st.divider()
     st.subheader("2) Divisive normalization")
-    _show_eq("Equation (on desirability s)", r"\tilde{x}_i = \dfrac{s_i}{\sigma + \sum_j s_j},\qquad s_i = \max(p) - p_i")
+    st.markdown("Scales each value by the average. For example, if a distractor value increases, the denominator increases, reducing sensitivity. Linear mapping.")
+    _show_eq("Equation", r"f(v) = \\frac{v}{\\text{mean}(v)}")
+    st.caption("Intuition: How big is this value compared to a typical (average) value?")
 
     sigma = st.slider("Stabilizer σ (divisive)", 0.0, 10.0, 1.0, 0.1)
 
     def divisive_norm(prices, sigma):
         s = desirability_from_price(prices)
-        denom = sigma + s.sum()
+        denom = sigma + s.mean() * len(s)
         if denom == 0:
             return np.zeros_like(s)
         return s / denom
@@ -324,31 +329,17 @@ if page == "Normalization Techniques":
 
     st.divider()
     st.subheader("3) Recurrent divisive normalization")
-    _show_eq("Fixed point", r"y_i = \dfrac{s_i}{\sigma + \sum_j w_{ij} y_j}\quad\Rightarrow\quad y^{(t+1)}_i = \dfrac{s_i}{\sigma + \sum_j w_{ij} y^{(t)}_j}")
+    st.markdown("Normalizes by the value itself plus the mean. Outputs bound between 0 and 1. Nonlinear: larger values flatten, emphasizing smaller differences among big numbers.")
+    _show_eq("Equation", r"f(v) = \\frac{v}{v + \\text{mean}(v)}")
+    st.caption("Intuition: Relative strength compared to background context — explains context-dependent perception.")
 
-    sigma_rec = st.slider("Stabilizer σ (recurrent)", 0.0, 10.0, 1.0, 0.1)
-    w_off = st.slider("Off-diagonal weight w (0=no interaction, 1=strong)", 0.0, 1.0, 0.5, 0.05)
-    max_iter = st.slider("Max iterations", 5, 200, 50, 5)
-    tol = st.slider("Convergence tol", 1e-6, 1e-2, 1e-4, format="%e")
+    def recurrent_divisive_norm(prices):
+        v = desirability_from_price(prices)
+        mean_v = v.mean()
+        return v / (v + mean_v)
 
-    def recurrent_divisive_norm(prices, sigma, w_off, max_iter, tol):
-        s = desirability_from_price(prices)
-        n = s.size
-        W = np.full((n, n), w_off)
-        np.fill_diagonal(W, 0.0)
-        y = np.zeros_like(s)
-        for _ in range(max_iter):
-            denom = sigma + W @ y
-            denom = np.where(denom == 0, np.finfo(float).eps, denom)
-            y_new = s / denom
-            if np.max(np.abs(y_new - y)) < tol:
-                y = y_new
-                break
-            y = y_new
-        return y
-
-    yA = recurrent_divisive_norm(prices_low, sigma_rec, w_off, max_iter, tol)
-    yB = recurrent_divisive_norm(prices_high, sigma_rec, w_off, max_iter, tol)
+    yA = recurrent_divisive_norm(prices_low)
+    yB = recurrent_divisive_norm(prices_high)
 
     col1, col2 = _two_cols()
     with col1:
@@ -357,28 +348,25 @@ if page == "Normalization Techniques":
         _plot_simple(idx, yB, "Restaurant index", "Normalized value", "Recurrent divisive norm – Context B")
 
     st.divider()
-    st.subheader("4) Adaptive gain / logistic value")
-    _show_eq("Logistic transform (lower price = higher value)", r"\tilde{x}_i = \frac{1}{1 + \exp\big(k\,[p_i - r]\big)}")
+    st.subheader("4) Adaptive gain / logistic model of value")
+    st.markdown("S-shaped sliding sigmoid. Captures contrast around the mean: small shifts near mean are exaggerated, extremes flatten. Below mean → compressed toward 0; above mean → toward 1.")
+    _show_eq("Equation", r"f(v) = \\frac{1}{1+e^{-(v-\\text{mean}(v)) \\cdot k}}")
+    st.caption("Intuition: Contrast enhancement — the brain emphasizes differences near the typical value, ignoring extremes.")
 
     k = st.slider("Slope k", 0.01, 2.0, 0.3, 0.01)
-    use_median = st.checkbox("Reference r = median price in context", value=True)
 
-    def logistic_value(prices, k, r=None):
-        p = np.array(prices, dtype=float)
-        if r is None:
-            r = np.median(p)
-        return 1.0 / (1.0 + np.exp(k * (p - r)))
+    def logistic_value(prices, k):
+        v = desirability_from_price(prices)
+        r = np.mean(v)
+        return 1.0 / (1.0 + np.exp(-(v - r) * k))
 
-    rA = np.median(prices_low) if use_median else st.number_input("Manual r for A", value=float(np.median(prices_low)))
-    rB = np.median(prices_high) if use_median else st.number_input("Manual r for B", value=float(np.median(prices_high)))
-
-    yA = logistic_value(prices_low, k, rA)
-    yB = logistic_value(prices_high, k, rB)
+    yA = logistic_value(prices_low, k)
+    yB = logistic_value(prices_high, k)
 
     col1, col2 = _two_cols()
     with col1:
-        _plot_simple(idx, yA, "Restaurant index", "Value", f"Adaptive gain (logistic) – Context A (r={rA:.2f})")
+        _plot_simple(idx, yA, "Restaurant index", "Value", "Adaptive gain (logistic) – Context A")
     with col2:
-        _plot_simple(idx, yB, "Restaurant index", "Value", f"Adaptive gain (logistic) – Context B (r={rB:.2f})")
+        _plot_simple(idx, yB, "Restaurant index", "Value", "Adaptive gain (logistic) – Context B")
 
-    st.caption("All normalization outputs above are on an arbitrary scale where **higher is better**.")
+    st.caption("All normalization outputs above are on an arbitrary scale where higher is better.")
