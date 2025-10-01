@@ -133,17 +133,70 @@ if page == "Expected Value (EV)":
 # ---------------------------------------
 # Expected Utility (EU)
 # ---------------------------------------
+# ---------------------------------------
+# Expected Utility (EU)
+# ---------------------------------------
 if page == "Expected Utility (EU)":
     st.title("Expected Utility (EU)")
-    st.markdown("EU allows **nonlinear utility**. Below we use a **sign–power/CRRA-style** shape.")
+    st.markdown(
+        "EU allows **nonlinear utility**. We use a sign–power (CRRA-style) function "
+        "implemented exactly as: `return (1 if v >= 0 else -1) * (abs(v) ** alpha)`."
+    )
+
+    alpha = st.slider("Curvature α", 0.2, 2.0, 0.8, 0.05)
+
+    _show_eq("Expected Utility of lottery L = {(x_i, p_i)}",
+             r"EU(L) = \sum_i p_i \cdot u(x_i)")
+
+    # Equations right above their corresponding graphs (side by side)
+    col_eq1, col_eq2 = st.columns(2)
+    with col_eq1:
+        st.latex(r"u(v) = (1 \; \text{if } v \ge 0 \; \text{else } -1)\cdot |v|^{\alpha}")
+        xr = np.linspace(-100, 100, 400)
+        u_vals = np.array([(1 if val >= 0 else -1) * (abs(val) ** alpha) for val in xr], dtype=float)
+        _plot_simple(xr, u_vals, "Outcome v", "Utility u(v)", f"Utility (α={alpha:.2f})")
+    with col_eq2:
+        st.latex(r"w(p) = p")
+        pr = np.linspace(0, 1, 200)
+        _plot_simple(pr, pr, "Probability p", "Weight w(p)", "Identity weighting: w(p)=p")
+
+    st.divider()
+    st.subheader("Worked examples (EU)")
+
+    def u_func(v, alpha):
+        return (1 if v >= 0 else -1) * (abs(v) ** alpha)
+
+    # Example 1: 0.01% to win 100,000; otherwise 0
+    p1 = 0.0001
+    EU1 = p1 * u_func(100_000.0, alpha) + (1 - p1) * u_func(0.0, alpha)
+
+    # Example 2: 50% +55, 50% -50
+    p2 = 0.5
+    EU2 = p2 * u_func(55.0, alpha) + (1 - p2) * u_func(-50.0, alpha)
+
+    colA, colB = st.columns(2)
+    with colA:
+        st.markdown("**Lottery ticket:** 0.01% chance to win 100,000")
+        st.latex(r"EU = 0.0001\,u(100{,}000) + 0.9999\,u(0)")
+        st.metric("EU (utils)", f"{EU1:.3g}")
+    with colB:
+        st.markdown("**50–50 gamble:** +55 / −50")
+        st.latex(r"EU = 0.5\,u(55) + 0.5\,u(-50)")
+        st.metric("EU (utils)", f"{EU2:.3g}")
+
+if page == "Expected Utility (EU)":
+    st.title("Expected Utility (EU)")
+    st.markdown("EU allows for subjective and **nonlinear utility**, which EV does not consider. The EU ")
 
     alpha = st.slider("Curvature (α). α<1: concave, α=1: linear, α>1: convex", 0.2, 2.0, 0.8, 0.05)
 
-    _show_eq("Expected Utility of lottery L = {(x_i, p_i)}", r"\\mathrm{EU}(L) = \\sum_i p_i \\cdot u(x_i)")
-    _show_eq("Utility (sign–power)", r"u(x) = \\operatorname{sign}(x)\\,|x|^{\\alpha}")
+    _show_eq("Expected Utility of lottery L = {(x_i, p_i)}", r"\mathrm{EU}(L) = \sum_i p_i \cdot u(x_i)")
+    _show_eq("Utility (sign–power)", r"u(x) = \operatorname{sign}(x)\,|x|^{\alpha}")
     _show_eq("Probability weighting (identity)", r"w(p) = p")
 
     # Visuals
+    st.divider()
+    st.subheader("Graphics of EU utility and probability weighting functions:")
     col1, col2 = _two_cols()
     with col1:
         xr = np.linspace(-100, 100, 400)
@@ -184,7 +237,7 @@ if page == "Expected Utility (EU)":
 # ---------------------------------------
 if page == "Prospect Theory (PT)":
     st.title("Prospect Theory (PT)")
-    st.markdown("PT uses a **reference-dependent value function** and **nonlinear probability weighting**.")
+    st.markdown("PT uses a **reference-dependent value function** and **nonlinear probability weighting** which EU does not consider. It has distinct domains with different functions for behaviors if they are considered a LOSS or GAIN.")
 
     st.subheader("Parameters")
     colA, colB = st.columns(2)
@@ -284,7 +337,7 @@ if page == "Normalization Comparisons":
     st.set_page_config(page_title="Normalization Methods Comparison", layout="wide")
 
     st.title("Normalization Comparison – Restaurant prices ")
-    st.caption("Interactive version of the Google Colab that compares the different normalization methods! Situation: imagine you're choosing  between restaurants with different prices.")
+    st.caption("Interactive version of the Google Colab that compares the different normalization methods! Situation: imagine you're choosing  between restaurants with different prices. You can compare what happens when the restaurant group has a larger range, when the average prices tend to be lower vs. higher, and how that plays out with each normalization method.")
 
     # -----------------------------
     # Helper: parse arrays from text
