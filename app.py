@@ -89,7 +89,7 @@ if page == "Expected Value (EV)":
     st.title("Expected Value (EV)")
     st.markdown("EV assumes **linear utility** and **linear probability weighting**. It computes the average value weighted by probabilities.")
 
-    _show_eq("EV of two-outcome lottery", r"\\mathrm{EV} = p \\cdot v_1 + (1 - p) \\cdot v_2")
+    _show_eq("EV of two-outcome lottery", r"EV = p \times v_1 + (1 - p) \times v_2")
     _show_eq("Utility (linear)", r"u(x) = x")
     _show_eq("Probability weighting (identity)", r"w(p) = p")
 
