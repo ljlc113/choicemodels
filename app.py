@@ -68,10 +68,10 @@ if page == "Overview":
         - **Prospect Theory (PT):** reference-dependent value and nonlinear probability weighting.
 
         **Normalization techniques** (applied in a choosing restaurants example):
-        - **Range normalization → linear scaling, sensitive to min and max.**
-        - **Divisive normalization → relative to the mean, not bounded.**
-        - **Recurrent divisive normalization → bounded, compresses large values.**
-        - **Adaptive gain / logistic value → nonlinear, highlights contrasts around the mean.**
+        - **Range normalization** → linear scaling, sensitive to min and max.
+        - **Divisive normalization** → relative to the mean, not bounded.
+        - **Recurrent divisive normalization** → bounded, compresses large values.
+        - **Adaptive gain / logistic value** → nonlinear, highlights contrasts around the mean.
         """
     )
     st.info("Use the sidebar to visit each page. Sliders let you change parameters and immediately see the equations and curves update.")
@@ -108,12 +108,12 @@ if page == "Expected Value (EV)":
 
     colA, colB = st.columns(2)
     with colA:
-        st.markdown("**Lottery ticket:** 0.01% chance to win $100,000; otherwise$0")
+        st.markdown("**Lottery ticket:** 0.01% chance to win 100,000; otherwise 0")
         st.latex(r"\\mathrm{EV} = 0.0001 \times 100{,}000 + 0.9999 \times 0 = 10")
         st.metric("EV", f"{ev1:.2f}")
         st.markdown("**What does this mean?** You should pursue this gamble, if the ticket costs less than 10 dollars.")
     with colB:
-        st.markdown("**50–50 gamble:** +$55 with 50%, −$50 with 50%")
+        st.markdown("**50–50 gamble:** +55 with 50%, −50 with 50%")
         st.latex(r"\\mathrm{EV} = 0.5 \times 55 + 0.5 \times (-50) = 2.5")
         st.metric("EV", f"{ev2:.2f}")
         st.markdown("**What does this mean?** You should pursue this gamble, because expected value is positive.")
@@ -136,189 +136,6 @@ if page == "Expected Value (EV)":
 # Expected Utility (EU)
 # ---------------------------------------
 if page == "Expected Utility (EU)":
-    st.set_page_config(page_title="Normalization Methods Comparison", layout="wide")
-
-    st.title("Normalization Models of Value – Comparison")
-    st.caption("Draft app that mirrors the behavior of your Colab snippet and lets you tweak inputs interactively.")
-
-    # -----------------------------
-    # Helper: parse arrays from text
-    # -----------------------------
-    def parse_array(s: str) -> np.ndarray:
-        toks = [t for t in s.replace(",", " ").split() if t]
-        try:
-            return np.array([float(t) for t in toks], dtype=float)
-        except Exception:
-            return np.array([], dtype=float)
-
-    # -----------------------------
-    # On-page inputs
-    # -----------------------------
-    st.header("Inputs")
-
-    def_v1 = "1 2 5 10"
-    def_v2 = "1 5 9 10"
-
-    col_in1, col_in2 = st.columns(2)
-    with col_in1:
-        v1_str = st.text_input("v1 (comma/space separated)", value=def_v1)
-    with col_in2:
-        v2_str = st.text_input("v2 (comma/space separated)", value=def_v2)
-
-    col_in3, col_in4 = st.columns([1,1])
-    with col_in3:
-        slope = st.slider("Adaptive gain slope k", 0.05, 2.0, 0.7, 0.05)
-    with col_in4:
-        show_table = st.checkbox("Show numeric table", value=True)
-
-    v1 = parse_array(v1_str)
-    v2 = parse_array(v2_str)
-
-    # Guardrail
-    if v1.size == 0 or v2.size == 0:
-        st.error("Please provide valid numeric arrays for v1 and v2.")
-        st.stop()
-
-    # Inline summary right under inputs
-    col_sum = st.columns(4)
-    col_sum[0].metric("Mean v1", f"{np.mean(v1):.2f}")
-    col_sum[1].metric("Range v1", f"{(np.max(v1) - np.min(v1)):.2f}")
-    col_sum[2].metric("Mean v2", f"{np.mean(v2):.2f}")
-    col_sum[3].metric("Range v2", f"{(np.max(v2) - np.min(v2)):.2f}")
-
-    # -----------------------------
-    # Summary box: means and ranges for v1 and v2 (compact layout)
-    # -----------------------------
-    st.markdown("### Summary: Mean and Range")
-    col_sum = st.columns(4)
-    col_sum[0].metric("Mean v1", f"{np.mean(v1):.2f}")
-    col_sum[1].metric("Range v1", f"{(np.max(v1) - np.min(v1)):.2f}")
-    col_sum[2].metric("Mean v2", f"{np.mean(v2):.2f}")
-    col_sum[3].metric("Range v2", f"{(np.max(v2) - np.min(v2)):.2f}")
-
-    # -----------------------------
-    # Normalization functions
-    # -----------------------------
-    def range_normalization(v: np.ndarray) -> np.ndarray:
-        v = np.asarray(v, dtype=float)
-        if v.size == 0:
-            return v
-        denom = v.max() - v.min()
-        if denom == 0:
-            return np.ones_like(v)
-        return v / denom
-
-
-    def divisive_normalization(v: np.ndarray) -> np.ndarray:
-        v = np.asarray(v, dtype=float)
-        if v.size == 0:
-            return v
-        mu = v.mean()
-        if mu == 0:
-            return np.zeros_like(v)
-        return v / mu
-
-
-    def recurrent_normalization(v: np.ndarray) -> np.ndarray:
-        v = np.asarray(v, dtype=float)
-        if v.size == 0:
-            return v
-        mu = v.mean()
-        return v / (v + mu)
-
-
-    def adaptive_gain(v: np.ndarray, k: float = 0.7) -> np.ndarray:
-        v = np.asarray(v, dtype=float)
-        if v.size == 0:
-            return v
-        mu = v.mean()
-        return 1.0 / (1.0 + np.exp(-(v - mu) * k))
-
-    # -----------------------------
-    # Compute
-    # -----------------------------
-    v1_rn  = range_normalization(v1)
-    v1_dn  = divisive_normalization(v1)
-    v1_rdn = recurrent_normalization(v1)
-    v1_ag  = adaptive_gain(v1, slope)
-
-    v2_rn  = range_normalization(v2)
-    v2_dn  = divisive_normalization(v2)
-    v2_rdn = recurrent_normalization(v2)
-    v2_ag  = adaptive_gain(v2, slope)
-
-    # -----------------------------
-    # Equations
-    # -----------------------------
-    st.markdown("### Equations")
-    colE1, colE2 = st.columns(2)
-    with colE1:
-        st.latex(r"\text{Range: } f(v)=\frac{v}{\max(v)-\min(v)}")
-        st.latex(r"\text{Divisive: } f(v)=\frac{v}{\operatorname{mean}(v)}")
-    with colE2:
-        st.latex(r"\text{Recurrent divisive: } f(v)=\frac{v}{v+\operatorname{mean}(v)}")
-        st.latex(r"\text{Adaptive gain: } f(v)=\frac{1}{1+e^{-(v-\operatorname{mean}(v))\,k}}")
-
-    # -----------------------------
-    # Plots (two panels like your Colab)
-    # -----------------------------
-    fig, ax = plt.subplots(1, 2, figsize=(12, 5), sharey=True)
-
-    # Colors matching your Colab example
-    c_rn = "#F8766D"
-    c_dn = "#7CAE00"
-    c_rdn = "#00BFC4"
-    c_ag = "#C77CFF"
-
-    ax[0].plot(v1, v1_rn,  color=c_rn,  marker='o')
-    ax[0].plot(v1, v1_dn,  color=c_dn,  marker='o')
-    ax[0].plot(v1, v1_rdn, color=c_rdn, marker='o')
-    ax[0].plot(v1, v1_ag,  color=c_ag,  marker='o')
-    ax[0].legend(['range normalization','divisive normalization','recurrent divisive norm','adaptive gain/logistic'])
-    ax[0].set_xlabel('Value')
-    ax[0].set_ylabel('Normalization model output')
-    ax[0].set_title('Normalization models (v1)')
-
-    ax[1].plot(v2, v2_rn,  color=c_rn,  marker='o')
-    ax[1].plot(v2, v2_dn,  color=c_dn,  marker='o')
-    ax[1].plot(v2, v2_rdn, color=c_rdn, marker='o')
-    ax[1].plot(v2, v2_ag,  color=c_ag,  marker='o')
-    ax[1].tick_params(labelleft=True)
-    ax[1].legend(['range normalization','divisive normalization','recurrent divisive norm','adaptive gain/logistic'])
-    ax[1].set_xlabel('Value')
-    ax[1].set_ylabel('Normalization model output')
-    ax[1].set_title('Normalization models (v2)')
-
-    st.pyplot(fig, clear_figure=True)
-
-    # -----------------------------
-    # Optional: table
-    # -----------------------------
-    if show_table:
-        st.markdown("### Numeric comparison table")
-        import pandas as pd
-        df1 = pd.DataFrame({
-            'v1': v1,
-            'range': v1_rn,
-            'divisive': v1_dn,
-            'recurrent': v1_rdn,
-            'adaptive_gain': v1_ag,
-        })
-        df2 = pd.DataFrame({
-            'v2': v2,
-            'range': v2_rn,
-            'divisive': v2_dn,
-            'recurrent': v2_rdn,
-            'adaptive_gain': v2_ag,
-        })
-        st.dataframe(df1, use_container_width=True)
-        st.dataframe(df2, use_container_width=True)
-
-    st.info("Tip: paste different arrays (e.g., low-biased vs high-biased) to see how context shifts each normalization.")
-
-    # ---------------------------------------
-    # Expected Utility (Draft Section)
-    # ---------------------------------------
     st.markdown("---")
     st.header("Expected Utility (Draft)")
 
