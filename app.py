@@ -62,16 +62,16 @@ if page == "Overview":
         This interactive app covers three classic decision models under risk/uncertainty and four 
         normalization schemes used in value coding.
 
-        **Models**
+        **Decision Models**
         - **Expected Value (EV):** linear utility, linear probability.
         - **Expected Utility (EU):** nonlinear utility over outcomes.
         - **Prospect Theory (PT):** reference-dependent value and nonlinear probability weighting.
 
-        **Normalization techniques** (applied to choosing between restaurants by price — *lower is better*):
-        - **Range normalization**
-        - **Divisive normalization**
-        - **Recurrent divisive normalization**
-        - **Adaptive gain / logistic value**
+        **Normalization techniques** (applied in a choosing restaurants example):
+        - **Range normalization → linear scaling, sensitive to min and max.**
+        - **Divisive normalization → relative to the mean, not bounded.**
+        - **Recurrent divisive normalization → bounded, compresses large values.**
+        - **Adaptive gain / logistic value → nonlinear, highlights contrasts around the mean.**
         """
     )
     st.info("Use the sidebar to visit each page. Sliders let you change parameters and immediately see the equations and curves update.")
@@ -251,6 +251,7 @@ if page == "Prospect Theory (PT)":
 # ---------------------------------------
 if page == "Normalization Techniques":
     st.title("Normalization Techniques (Overview)")
+    st.caption("Normalization methods are techniques used to adjust or scale values so they’re easier to compare, interpret, or process. Below are 4 types of normalization methods that can be used in the context of making decisions with various influences.")
 
     st.divider()
     st.subheader("1) Range normalization")
@@ -282,8 +283,8 @@ if page == "Normalization Techniques":
 if page == "Normalization Comparisons":
     st.set_page_config(page_title="Normalization Methods Comparison", layout="wide")
 
-    st.title("Normalization Models of Value – Comparison")
-    st.caption("Interactive version of the Google Colab that compares the different normalization methods!")
+    st.title("Normalization Comparison – Restaurant prices ")
+    st.caption("Interactive version of the Google Colab that compares the different normalization methods! Situation: imagine you're choosing  between restaurants with different prices.")
 
     # -----------------------------
     # Helper: parse arrays from text
