@@ -307,7 +307,6 @@ if page == "Normalization Comparisons":
 # -----------------------------
 # Normalization comparison table (with your equations)
 # -----------------------------
-    st.subheader("Comparison of Normalization Models")
     import pandas as pd
     data = {
         "Normalization Model": [
@@ -317,10 +316,10 @@ if page == "Normalization Comparisons":
             "Adaptive Gain / Logistic Model"
         ],
         "Equation (as implemented)": [
-            r"$V_{norm}(v) = \dfrac{v}{\max(v) - \min(v)}$",
-            r"$V_{norm}(v) = \dfrac{v}{\text{mean}(v)}$",
-            r"$V_{norm}(v) = \dfrac{v}{v + \text{mean}(v)}$",
-            r"$V(v) = \dfrac{1}{1 + \exp\big(-(v - \text{mean}(v)) \cdot \text{slope}\big)}$"
+            r"$f(v) = \dfrac{v}{\max(v) - \min(v)}$",
+            r"$f(v) = \dfrac{v}{\text{mean}(v)}$",
+            r"$f(v) = \dfrac{v}{v + \text{mean}(v)}$",
+            r"$f(v) = \dfrac{1}{1 + \exp\big(-(v - \text{mean}(v)) \cdot \text{slope}\big)}$"
         ],
         "When to Use": [
             "Scales values by the observed range. Useful when absolute min/max bounds of options matter.",
