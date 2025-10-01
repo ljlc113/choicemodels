@@ -476,21 +476,7 @@ if page == "Normalization Comparisons":
         ]
     }
 
-    df_norm = pd.DataFrame(data)
+    df_norm = pd.DataFrame(data).set_index("Normalization Model")
 
     # Display the table in Streamlit
     st.table(df_norm)
-
-
-     # -----------------------------
-    # Equations
-    # -----------------------------
-    st.markdown("### Equations")
-    colE1, colE2 = st.columns(2)
-    with colE1:
-        st.latex(r"\text{Range: } f(v)=\frac{v}{\max(v)-\min(v)}")
-        st.latex(r"\text{Divisive: } f(v)=\frac{v}{\operatorname{mean}(v)}")
-    with colE2:
-        st.latex(r"\text{Recurrent divisive: } f(v)=\frac{v}{v+\operatorname{mean}(v)}")
-        st.latex(r"\text{Adaptive gain: } f(v)=\frac{1}{1+e^{-(v-\operatorname{mean}(v))\,k}}")
-    
