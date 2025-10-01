@@ -304,6 +304,37 @@ if page == "Normalization Comparisons":
         except Exception:
             return np.array([], dtype=float)
 
+# -----------------------------
+# Normalization comparison table (with your equations)
+# -----------------------------
+    st.subheader("Comparison of Normalization Models")
+
+    data = {
+        "Normalization Model": [
+            "Range Normalization",
+            "Divisive Normalization",
+            "Recurrent Divisive Normalization",
+            "Adaptive Gain / Logistic Model"
+        ],
+        "Equation (as implemented)": [
+            r"$V_{norm}(v) = \dfrac{v}{\max(v) - \min(v)}$",
+            r"$V_{norm}(v) = \dfrac{v}{\text{mean}(v)}$",
+            r"$V_{norm}(v) = \dfrac{v}{v + \text{mean}(v)}$",
+            r"$V(v) = \dfrac{1}{1 + \exp\big(-(v - \text{mean}(v)) \cdot \text{slope}\big)}$"
+        ],
+        "When to Use": [
+            "Scales values by the observed range. Useful when absolute min/max bounds of options matter.",
+            "Normalizes relative to the average. Good when choices are judged against the context mean.",
+            "Adds recurrent suppression (self + mean). Captures competitive dynamics between options.",
+            "Produces sigmoidal sensitivity around the context mean, with adjustable slope. Useful for adaptive gain and psychophysical modeling."
+        ]
+    }
+
+    df_norm = pd.DataFrame(data).set_index("Normalization Model")
+
+    # Display the table in Streamlit
+    st.table(df_norm)
+
     # -----------------------------
     # On-page inputs
     # -----------------------------
@@ -447,34 +478,3 @@ if page == "Normalization Comparisons":
         })
         st.dataframe(df1, use_container_width=True)
         st.dataframe(df2, use_container_width=True)
-
-# -----------------------------
-# Normalization comparison table (with your equations)
-# -----------------------------
-    st.subheader("Comparison of Normalization Models")
-
-    data = {
-        "Normalization Model": [
-            "Range Normalization",
-            "Divisive Normalization",
-            "Recurrent Divisive Normalization",
-            "Adaptive Gain / Logistic Model"
-        ],
-        "Equation (as implemented)": [
-            r"$V_{norm}(v) = \dfrac{v}{\max(v) - \min(v)}$",
-            r"$V_{norm}(v) = \dfrac{v}{\text{mean}(v)}$",
-            r"$V_{norm}(v) = \dfrac{v}{v + \text{mean}(v)}$",
-            r"$V(v) = \dfrac{1}{1 + \exp\big(-(v - \text{mean}(v)) \cdot \text{slope}\big)}$"
-        ],
-        "When to Use": [
-            "Scales values by the observed range. Useful when absolute min/max bounds of options matter.",
-            "Normalizes relative to the average. Good when choices are judged against the context mean.",
-            "Adds recurrent suppression (self + mean). Captures competitive dynamics between options.",
-            "Produces sigmoidal sensitivity around the context mean, with adjustable slope. Useful for adaptive gain and psychophysical modeling."
-        ]
-    }
-
-    df_norm = pd.DataFrame(data)
-
-    # Display the table in Streamlit
-    st.table(df_norm)
