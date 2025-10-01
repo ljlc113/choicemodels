@@ -251,36 +251,11 @@ if page == "Prospect Theory (PT)":
 if page == "Normalization Techniques":
     st.title("Normalization Techniques (Overview)")
 
-
-    # Indices for plotting (each context can have a different number of items)
-    idxA = np.arange(1, len(prices_low) + 1) if len(prices_low) > 0 else np.array([1])
-    idxB = np.arange(1, len(prices_high) + 1) if len(prices_high) > 0 else np.array([1])
-
     st.divider()
     st.subheader("1) Range normalization")
     st.markdown("Scales each value by the total range. Sensitive to extremes; if one value is big, everything else looks small. Linear mapping.")
     st.latex(r"f(v) = \frac{v}{\max(v) - \min(v)}")
     st.caption("Intuition: How big is this value compared to the total spread?")
-
-    def range_norm(prices):
-        p = np.array(prices, dtype=float)
-        if p.size == 0:
-            return p
-        denom = p.max() - p.min()
-        if denom == 0:
-            return np.ones_like(p)
-        return (p.max() - p) / denom
-
-    yA = range_norm(prices_low)
-    yB = range_norm(prices_high)
-
-    col1, col2 = _two_cols()
-    with col1:
-        if yA.size:
-            _plot_simple(idxA, yA, "Restaurant index", "Normalized value", "Range norm – Context A")
-    with col2:
-        if yB.size:
-            _plot_simple(idxB, yB, "Restaurant index", "Normalized value", "Range norm – Context B")
 
     st.divider()
     st.subheader("2) Divisive normalization")
@@ -288,79 +263,17 @@ if page == "Normalization Techniques":
     st.latex(r"f(v) = \frac{v}{\text{mean}(v)}")
     st.caption("Intuition: How big is this value compared to a typical (average) value?")
 
-    sigma = st.slider("Stabilizer σ (divisive)", 0.0, 10.0, 1.0, 0.1)
-
-    def divisive_norm(prices, sigma):
-        p = np.array(prices, dtype=float)
-        if p.size == 0:
-            return p
-        denom = sigma + p.mean() * len(p)  # == sigma + sum(p)
-        if denom == 0:
-            return np.zeros_like(p)
-        return p / denom
-
-    yA = divisive_norm(prices_low, sigma)
-    yB = divisive_norm(prices_high, sigma)
-
-    col1, col2 = _two_cols()
-    with col1:
-        if yA.size:
-            _plot_simple(idxA, yA, "Restaurant index", "Normalized value", "Divisive norm – Context A")
-    with col2:
-        if yB.size:
-            _plot_simple(idxB, yB, "Restaurant index", "Normalized value", "Divisive norm – Context B")
-
     st.divider()
     st.subheader("3) Recurrent divisive normalization")
     st.markdown("Normalizes by the value itself plus the mean. Outputs bound between 0 and 1. Nonlinear: larger values flatten, emphasizing smaller differences among big numbers.")
     st.latex(r"f(v) = \frac{v}{v + \text{mean}(v)}")
     st.caption("Intuition: Relative strength compared to background context — explains context-dependent perception.")
 
-    def recurrent_divisive_norm(prices):
-        p = np.array(prices, dtype=float)
-        if p.size == 0:
-            return p
-        mean_p = p.mean()
-        return p / (p + mean_p)
-
-    yA = recurrent_divisive_norm(prices_low)
-    yB = recurrent_divisive_norm(prices_high)
-
-    col1, col2 = _two_cols()
-    with col1:
-        if yA.size:
-            _plot_simple(idxA, yA, "Restaurant index", "Normalized value", "Recurrent divisive norm – Context A")
-    with col2:
-        if yB.size:
-            _plot_simple(idxB, yB, "Restaurant index", "Normalized value", "Recurrent divisive norm – Context B")
-
     st.divider()
     st.subheader("4) Adaptive gain / logistic model of value")
     st.markdown("S-shaped sliding sigmoid. Captures contrast around the mean: small shifts near mean are exaggerated, extremes flatten. Below mean → compressed toward 0; above mean → toward 1.")
     st.latex(r"f(v) = \frac{1}{1+e^{-(v-\text{mean}(v)) \cdot k}}")
     st.caption("Intuition: Contrast enhancement — the brain emphasizes differences near the typical value, ignoring extremes.")
-
-    k = st.slider("Slope k", 0.01, 2.0, 0.3, 0.01)
-
-    def logistic_value(prices, k):
-        p = np.array(prices, dtype=float)
-        if p.size == 0:
-            return p
-        r = np.mean(p)
-        return 1.0 / (1.0 + np.exp(-(p - r) * k))
-
-    yA = logistic_value(prices_low, k)
-    yB = logistic_value(prices_high, k)
-
-    col1, col2 = _two_cols()
-    with col1:
-        if yA.size:
-            _plot_simple(idxA, yA, "Restaurant index", "Value", "Adaptive gain (logistic) – Context A")
-    with col2:
-        if yB.size:
-            _plot_simple(idxB, yB, "Restaurant index", "Value", "Adaptive gain (logistic) – Context B")
-
-    st.caption("All normalization outputs above are on an arbitrary scale where higher is better.")
 
 if page == "Normalization Techniques":
     st.set_page_config(page_title="Normalization Methods Comparison", layout="wide")
