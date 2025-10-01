@@ -15,7 +15,7 @@ page = st.sidebar.radio(
         "Expected Value (EV)",
         "Expected Utility (EU)",
         "Prospect Theory (PT)",
-        "Normalization Techniques"
+        "Normalization Techniques",
         "Normalization Comparisons",
     ),
 )
