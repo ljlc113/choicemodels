@@ -308,9 +308,9 @@ if page == "Normalization Comparisons":
 
     col_in1, col_in2 = st.columns(2)
     with col_in1:
-        v1_str = st.text_input("v1 (comma/space separated)", value=def_v1)
+        v1_str = st.text_input("Restaurant Group 1 (comma/space separated)", value=def_v1)
     with col_in2:
-        v2_str = st.text_input("v2 (comma/space separated)", value=def_v2)
+        v2_str = st.text_input("Restaurant Group 1 (comma/space separated)", value=def_v2)
 
     col_in3, col_in4 = st.columns([1,1])
     with col_in3:
@@ -325,6 +325,20 @@ if page == "Normalization Comparisons":
     if v1.size == 0 or v2.size == 0:
         st.error("Please provide valid numeric arrays for v1 and v2.")
         st.stop()
+        
+    # -----------------------------
+    # Summary box: means and ranges for v1 and v2
+    # -----------------------------
+    st.markdown("### Summary: Mean and Range")
+    col_sum1, col_sum2 = st.columns(2)
+    with col_sum1:
+        st.markdown("**v1 summary**")
+        st.metric("Mean (v1)", f"{np.mean(v1):.3g}")
+        st.metric("Range (max−min)", f"{(np.max(v1) - np.min(v1)):.3g}")
+    with col_sum2:
+        st.markdown("**v2 summary**")
+        st.metric("Mean (v2)", f"{np.mean(v2):.3g}")
+        st.metric("Range (max−min)", f"{(np.max(v2) - np.min(v2)):.3g}")
 
     # -----------------------------
     # Normalization functions
@@ -407,7 +421,7 @@ if page == "Normalization Comparisons":
     ax[0].legend(['range normalization','divisive normalization','recurrent divisive norm','adaptive gain/logistic'])
     ax[0].set_xlabel('Value')
     ax[0].set_ylabel('Normalization model output')
-    ax[0].set_title('Normalization models (v1)')
+    ax[0].set_title('Normalization models (Restaurant Group 1)')
 
     ax[1].plot(v2, v2_rn,  color=c_rn,  marker='o')
     ax[1].plot(v2, v2_dn,  color=c_dn,  marker='o')
@@ -417,7 +431,7 @@ if page == "Normalization Comparisons":
     ax[1].legend(['range normalization','divisive normalization','recurrent divisive norm','adaptive gain/logistic'])
     ax[1].set_xlabel('Value')
     ax[1].set_ylabel('Normalization model output')
-    ax[1].set_title('Normalization models (v2)')
+    ax[1].set_title('Normalization models (Restaurant Group 2)')
 
     st.pyplot(fig, clear_figure=True)
 
