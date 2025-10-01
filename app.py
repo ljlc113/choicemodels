@@ -139,13 +139,16 @@ if page == "Expected Value (EV)":
 if page == "Expected Utility (EU)":
     st.title("Expected Utility (EU)")
     st.markdown(
-        "EU allows **nonlinear utility**. We use a sign–power (CRRA-style) function that takes the absolute value (to account for negative value) raised to the power of α>1, to reflect diminishing marginal returns."
+        "EU allows **nonlinear utility**, which EV does not consider. We use a sign–power (CRRA-style) function that calculates value raised to the power of α>1, to reflect diminishing marginal returns, and becomes negative if a negative value is passed through the function."
     )
 
     alpha = st.slider("Curvature α", 0.2, 2.0, 0.8, 0.05)
 
-    st.latex(r"EU(v) = |v|^{\alpha}")
+    st.latex(r"EU(v) = \operatorname{sign}(x)\,|x|^{\alpha}")
 
+    # Visuals
+    st.divider()
+    st.subheader("Graphics of EU utility and probability weighting functions:")
     # Equations right above their corresponding graphs (side by side)
     col_eq1, col_eq2 = st.columns(2)
     with col_eq1:
@@ -180,54 +183,6 @@ if page == "Expected Utility (EU)":
     with colB:
         st.markdown("**50–50 gamble:** +55 / −50")
         st.latex(r"EU = 0.5\,u(55) + 0.5\,u(-50)")
-        st.metric("EU (utils)", f"{EU2:.3g}")
-
-if page == "Expected Utility (EU)":
-    st.title("Expected Utility (EU)")
-    st.markdown("EU allows for subjective and **nonlinear utility**, which EV does not consider. The EU ")
-
-    alpha = st.slider("Curvature (α). α<1: concave, α=1: linear, α>1: convex", 0.2, 2.0, 0.8, 0.05)
-
-    _show_eq("Expected Utility of lottery L = {(x_i, p_i)}", r"\mathrm{EU}(L) = \sum_i p_i \cdot u(x_i)")
-    _show_eq("Utility (sign–power)", r"u(x) = \operatorname{sign}(x)\,|x|^{\alpha}")
-    _show_eq("Probability weighting (identity)", r"w(p) = p")
-
-    # Visuals
-    st.divider()
-    st.subheader("Graphics of EU utility and probability weighting functions:")
-    col1, col2 = _two_cols()
-    with col1:
-        xr = np.linspace(-100, 100, 400)
-        u = np.sign(xr) * (np.abs(xr) ** alpha)
-        _plot_simple(xr, u, "Outcome x", "Utility u(x)", f"Sign–power utility (α={alpha:.2f})")
-
-    with col2:
-        pr = np.linspace(0, 1, 200)
-        _plot_simple(pr, pr, "Probability p", "Weight w(p)", "Identity weighting: w(p)=p")
-
-    st.divider()
-    st.subheader("Worked examples (EU)")
-
-    def u(x):
-        x = np.asarray(x, dtype=float)
-        return np.sign(x) * (np.abs(x) ** alpha)
-
-    # Example 1: 0.01% to win 100,000; otherwise 0
-    p1 = 0.0001
-    EU1 = p1 * u(100_000.0) + (1 - p1) * u(0.0)
-
-    # Example 2: 50% +55, 50% -50
-    p2 = 0.5
-    EU2 = p2 * u(55.0) + (1 - p2) * u(-50.0)
-
-    colA, colB = st.columns(2)
-    with colA:
-        st.markdown("**Lottery ticket:** 0.01% chance to win 100,000")
-        st.latex(r"\\mathrm{EU} = w(p)u(100{,}000) + w(1-p)u(0),\\; w(p)=p")
-        st.metric("EU (utils)", f"{EU1:.3g}")
-    with colB:
-        st.markdown("**50–50 gamble:** +55 / −50")
-        st.latex(r"\\mathrm{EU} = 0.5\,u(55) + 0.5\,u(-50)")
         st.metric("EU (utils)", f"{EU2:.3g}")
 
 # ---------------------------------------
