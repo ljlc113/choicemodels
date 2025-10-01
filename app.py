@@ -308,7 +308,7 @@ if page == "Normalization Comparisons":
 # Normalization comparison table (with your equations)
 # -----------------------------
     st.subheader("Comparison of Normalization Models")
-
+    import pandas as pd
     data = {
         "Normalization Model": [
             "Range Normalization",
@@ -461,7 +461,6 @@ if page == "Normalization Comparisons":
     # -----------------------------
     if show_table:
         st.markdown("### Numeric comparison table")
-        import pandas as pd
         df1 = pd.DataFrame({
             'v1': v1,
             'range': v1_rn,
