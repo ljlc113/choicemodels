@@ -447,8 +447,6 @@ if page == "Normalization Comparisons":
         })
         st.dataframe(df1, use_container_width=True)
         st.dataframe(df2, use_container_width=True)
-    
-    import pandas as pd
 
 # -----------------------------
 # Normalization comparison table (with your equations)
