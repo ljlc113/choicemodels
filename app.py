@@ -249,38 +249,8 @@ if page == "Prospect Theory (PT)":
 # Normalization Techniques
 # ---------------------------------------
 if page == "Normalization Techniques":
-    st.title("Normalization Techniques (Restaurant Prices)")
+    st.title("Normalization Techniques (Overview)")
 
-    st.subheader("Example contexts")
-    st.markdown("Enter the individual restaurant prices for each context (comma or space separated). We'll compute the average for you.")
-
-    def parse_prices(s: str):
-        try:
-            toks = [t for t in s.replace(",", " ").split() if t]
-            arr = np.array([float(t) for t in toks], dtype=float)
-            return arr
-        except Exception:
-            return np.array([], dtype=float)
-
-    colL, colH = st.columns(2)
-    with colL:
-        st.markdown("**Context A (biased low prices)**")
-        sA = st.text_input("Prices A", value="8 9.5 12 10 7.5", key="pricesA")
-        prices_low = parse_prices(sA)
-        if prices_low.size == 0:
-            st.error("Enter at least one numeric price for A.")
-        else:
-            st.write({f"R{i+1}": float(p) for i, p in enumerate(prices_low)})
-            st.metric("Average price (A)", f"{prices_low.mean():.2f}")
-    with colH:
-        st.markdown("**Context B (biased high prices)**")
-        sB = st.text_input("Prices B", value="28 32 30 35 40", key="pricesB")
-        prices_high = parse_prices(sB)
-        if prices_high.size == 0:
-            st.error("Enter at least one numeric price for B.")
-        else:
-            st.write({f"R{i+1}": float(p) for i, p in enumerate(prices_high)})
-            st.metric("Average price (B)", f"{prices_high.mean():.2f}")
 
     # Indices for plotting (each context can have a different number of items)
     idxA = np.arange(1, len(prices_low) + 1) if len(prices_low) > 0 else np.array([1])
