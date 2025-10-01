@@ -306,7 +306,7 @@ if page == "Normalization Techniques":
     st.divider()
     st.subheader("2) Divisive normalization")
     st.markdown("Scales each value by the average. For example, if a distractor value increases, the denominator increases, reducing sensitivity. Linear mapping.")
-    st.latex(r"f(v) = \\frac{v}{\\text{mean}(v)}")
+    st.latex(r"f(v) = \frac{v}{\text{mean}(v)}")
     st.caption("Intuition: How big is this value compared to a typical (average) value?")
 
     sigma = st.slider("Stabilizer σ (divisive)", 0.0, 10.0, 1.0, 0.1)
@@ -330,7 +330,7 @@ if page == "Normalization Techniques":
     st.divider()
     st.subheader("3) Recurrent divisive normalization")
     st.markdown("Normalizes by the value itself plus the mean. Outputs bound between 0 and 1. Nonlinear: larger values flatten, emphasizing smaller differences among big numbers.")
-    st.latex(r"f(v) = \\frac{v}{v + \\text{mean}(v)}")
+    st.latex(r"f(v) = \\=frac{v}{v + \text{mean}(v)}")
     st.caption("Intuition: Relative strength compared to background context — explains context-dependent perception.")
 
     def recurrent_divisive_norm(prices):
@@ -350,7 +350,7 @@ if page == "Normalization Techniques":
     st.divider()
     st.subheader("4) Adaptive gain / logistic model of value")
     st.markdown("S-shaped sliding sigmoid. Captures contrast around the mean: small shifts near mean are exaggerated, extremes flatten. Below mean → compressed toward 0; above mean → toward 1.")
-    st.latex(r"f(v) = \\frac{1}{1+e^{-(v-\\text{mean}(v)) \\cdot k}}")
+    st.latex(r"f(v) = \frac{1}{1+e^{-(v-\text{mean}(v)) \cdot k}}")
     st.caption("Intuition: Contrast enhancement — the brain emphasizes differences near the typical value, ignoring extremes.")
 
     k = st.slider("Slope k", 0.01, 2.0, 0.3, 0.01)
